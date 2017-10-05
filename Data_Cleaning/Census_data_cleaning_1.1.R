@@ -133,12 +133,67 @@ WI_block_level_pop$blockgroup <- substring(as.character(WI_block_level_pop$BLOCK
 calculated_block_group_pop <- ddply(WI_block_level_pop, c("STATEFP10", "COUNTYFP10", "TRACTCE10", "blockgroup"), summarize,
                                          calculated_population=sum(POP10))
 
-# Merge with directly downloaded data
+# Merge with directly downloaded data to see whether the sum of the block's individual populations matches the block groups
 # This block group assignment works!
 block_group_pop_compare <- merge(x = calculated_block_group_pop, y = dane.county.blocks.race[,c("STATEFP10", "COUNTYFP10", "TRACTCE10", "blockgroup", "total_population")])
+#********************************************
 
 
-test <- WI_block_level_pop[WI_block_level_pop$TRACTCE10 == 11102,]
+#********************************************
+#Get estimated counts of each demographic in each block by proportional assignment
+#Merge block group total population with block level populations
+WI_block_level_pop <- merge(x = WI_block_level_pop, y = dane.county.blocks.race[,c("STATEFP10", "COUNTYFP10", "TRACTCE10", "blockgroup", "total_population",
+                                                                                  "not_hisp_latin_total",  "hisp_latin_total",
+                                                                                   "not_hisp_latin_white", "hisp_latin_white",
+                                                                                   "not_hisp_latin_black", "hisp_latin_black",
+                                                                                   "not_hisp_latin_asian", "hisp_latin_asian"
+                                                                                   )])
+#rename block group population
+names(WI_block_level_pop)[10] <- "blockgroup_pop_total"
+
+#combine some columns
+WI_block_level_pop$blockgroup_pop_white <- WI_block_level_pop$not_hisp_latin_white + WI_block_level_pop$hisp_latin_white
+WI_block_level_pop$blockgroup_pop_black <- WI_block_level_pop$not_hisp_latin_black + WI_block_level_pop$hisp_latin_black
+WI_block_level_pop$blockgroup_pop_asian <- WI_block_level_pop$not_hisp_latin_asian + WI_block_level_pop$hisp_latin_asian
+WI_block_level_pop$blockgroup_pop_hisp <- WI_block_level_pop$hisp_latin_total
+#Other includes american indian / native alaskan and hawiian and pacific islanders
+WI_block_level_pop$blockgroup_pop_other <- WI_block_level_pop$blockgroup_pop_total - WI_block_level_pop$blockgroup_pop_white - WI_block_level_pop$blockgroup_pop_black - WI_block_level_pop$blockgroup_pop_asian
+
+#remove variables we don't want
+drops <- c("not_hisp_latin_total","hisp_latin_total", "not_hisp_latin_white", "hisp_latin_white",
+           "not_hisp_latin_black", "hisp_latin_black", "not_hisp_latin_asian", "hisp_latin_asian",
+           "HOUSING10", "PARTFLG")
+WI_block_level_pop <- WI_block_level_pop[ , !(names(WI_block_level_pop) %in% drops)]
+
+#get proportion of each block to be assigned to each demographic
+WI_block_level_pop$prop_hisp <- WI_block_level_pop$blockgroup_pop_hisp / WI_block_level_pop$blockgroup_pop_total
+WI_block_level_pop$prop_white <- WI_block_level_pop$blockgroup_pop_white / WI_block_level_pop$blockgroup_pop_total
+WI_block_level_pop$prop_black <- WI_block_level_pop$blockgroup_pop_black / WI_block_level_pop$blockgroup_pop_total
+WI_block_level_pop$prop_asian <- WI_block_level_pop$blockgroup_pop_asian / WI_block_level_pop$blockgroup_pop_total
+WI_block_level_pop$prop_other <- WI_block_level_pop$blockgroup_pop_other / WI_block_level_pop$blockgroup_pop_total
+
+#remove variables we don't want
+drops <- c("blockgroup_pop_hisp","blockgroup_pop_white", "blockgroup_pop_black", "blockgroup_pop_asian",
+           "blockgroup_pop_other", "blockgroup_pop_total")
+
+WI_block_level_pop <- WI_block_level_pop[ , !(names(WI_block_level_pop) %in% drops)]
+
+#get estimated number of individuals in each block in each demographic group
+#Note, this makes the assumption that different demographic populations are uniformly distributed throughout the block groups
+WI_block_level_pop$block_pop_white_est <- WI_block_level_pop$POP10 * WI_block_level_pop$prop_white
+WI_block_level_pop$block_pop_hisp_est <- WI_block_level_pop$POP10 * WI_block_level_pop$prop_hisp
+WI_block_level_pop$block_pop_black_est <- WI_block_level_pop$POP10 * WI_block_level_pop$prop_black
+WI_block_level_pop$block_pop_asian_est <- WI_block_level_pop$POP10 * WI_block_level_pop$prop_asian
+WI_block_level_pop$block_pop_other_est <- WI_block_level_pop$POP10 * WI_block_level_pop$prop_other
+
+#remove variables we don't want
+drops <- c("prop_white","prop_hisp", "prop_black", "prop_asian", "prop_other")
+
+WI_block_level_pop <- WI_block_level_pop[ , !(names(WI_block_level_pop) %in% drops)]
+
+#********************************************
+#Create voting district level dataset with estimated populations for each demographic
+
 
 
 
@@ -153,7 +208,7 @@ PA_all_counties_geo=geo.make(state="PA", county=PA.counties, tract = "*", block.
 
 #download 
 
-
+length(unique(WI_block_to_VTD_crosswalk$DISTRICT))
 
 
 
