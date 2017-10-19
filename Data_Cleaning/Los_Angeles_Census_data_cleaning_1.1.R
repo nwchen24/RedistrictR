@@ -57,6 +57,8 @@ LA_county_geo=geo.make(state="CA", county="Los Angeles", tract = "*", block.grou
 race<-acs.fetch(endyear = 2010, span = 0, dataset = "sf1", geography = LA_county_geo,
                 table.number = "P5", col.names = "pretty", case.sensitive = F)
 
+
+
 # Convert the downloaded data to dataframe
 LA.blocks.race <- as.data.frame(race@estimate)
 
@@ -92,6 +94,88 @@ sum(LA.blocks.race$total_population)
 
 # You can download mapping from census tracts to 113th congressional districts from this link
 # https://www.census.gov/geo/maps-data/data/cd_state.html
+
+
+#*******************************
+#Download economic data
+#Look at tables here: https://www.census.gov/programs-surveys/acs/technical-documentation/table-shells.2010.html
+#Table B19049 has median income by 
+#acs.lookup(endyear=2011, span=5,dataset="acs", keyword= c("median","income","household","total"), case.sensitive=F)
+
+income <- acs.fetch(endyear = 2011, span = 5, dataset = "acs", geography = LA_county_geo,
+                      table.number = "B19049", col.names = "pretty", case.sensitive = F)
+
+#put estimates in dataframe
+LA.blocks.income <- as.data.frame(income@estimate)
+
+# add variables for state, county, tract, and block group
+LA.blocks.income$STATEFP <- income@geography$state
+LA.blocks.income$COUNTYFP <- income@geography$county
+LA.blocks.income$TRACTCE <- income@geography$tract
+LA.blocks.income$BLKGRPCE <- income@geography$blockgroup
+
+rownames(LA.blocks.income) <- seq(length=nrow(LA.blocks.income))
+
+#Rename columns
+names(LA.blocks.income)[1] <- c("overall_median_income")
+
+#drop columns we don't need
+LA.blocks.income <- LA.blocks.income[,c("overall_median_income", "STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE")]
+
+
+#*******************************
+#Download age data
+#Look at tables here: https://www.census.gov/programs-surveys/acs/technical-documentation/table-shells.2010.html
+#Table B19049 has median income by 
+#acs.lookup(endyear=2011, span=5,dataset="acs", keyword= c("median","income", "household","total"), case.sensitive=F)
+
+income <- acs.fetch(endyear = 2010, span = 5, dataset = "acs", geography = LA_county_geo,
+                    table.number = "B19049", col.names = "pretty", case.sensitive = F)
+
+#put estimates in dataframe
+LA.blocks.income <- as.data.frame(income@estimate)
+
+# add variables for state, county, tract, and block group
+LA.blocks.income$STATEFP <- income@geography$state
+LA.blocks.income$COUNTYFP <- income@geography$county
+LA.blocks.income$TRACTCE <- income@geography$tract
+LA.blocks.income$BLKGRPCE <- income@geography$blockgroup
+
+rownames(LA.blocks.income) <- seq(length=nrow(LA.blocks.income))
+
+#Rename columns
+names(LA.blocks.income)[1] <- c("overall_median_income")
+
+#drop columns we don't need
+LA.blocks.income <- LA.blocks.income[,c("overall_median_income", "STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE")]
+
+
+#Download age data
+#Look at tables here: https://www.census.gov/programs-surveys/acs/technical-documentation/table-shells.2010.html
+#Table B01002 has median age
+#acs.lookup(endyear=2011, span=5,dataset="acs", keyword= c("median","age","total"), case.sensitive=F)
+
+age <- acs.fetch(endyear = 2011, span = 5, dataset = "acs", geography = LA_county_geo,
+                    table.number = "B01002", col.names = "pretty", case.sensitive = F)
+
+#put estimates in dataframe
+LA.blocks.age <- as.data.frame(age@estimate)
+
+# add variables for state, county, tract, and block group
+LA.blocks.age$STATEFP <- age@geography$state
+LA.blocks.age$COUNTYFP <- age@geography$county
+LA.blocks.age$TRACTCE <- age@geography$tract
+LA.blocks.age$BLKGRPCE <- age@geography$blockgroup
+
+rownames(LA.blocks.age) <- seq(length=nrow(LA.blocks.age))
+
+#Rename columns
+names(LA.blocks.age)[1] <- c("overall_median_age")
+
+#drop columns we don't need
+LA.blocks.age <- LA.blocks.age[,c("overall_median_age", "STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE")]
+
+
 
 #********************************
 # Import data
@@ -244,6 +328,11 @@ LA_blockgroup_pop_and_voting_data <- ddply(LA_block_level_pop_and_voting_data, c
                                            block_pop_other_est = sum(block_pop_other_est),
                                            Dem_votes_Pres_08 = sum(Dem_votes_Pres_08),
                                            Rep_votes_Pres_08 = sum(Rep_votes_Pres_08))
+
+#merge in age and income
+LA_blockgroup_pop_and_voting_data <- merge(LA_blockgroup_pop_and_voting_data, LA.blocks.income)
+LA_blockgroup_pop_and_voting_data <- merge(LA_blockgroup_pop_and_voting_data, LA.blocks.age)
+
 
 #Save as R data
 save(CA_block_group_shapes, LA_block_level_pop_and_voting_data,  file = "LA_County_CA_blockgroup_pop_voting_and_shapes.RData")
