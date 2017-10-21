@@ -282,6 +282,16 @@ county.data.pull <- function(county_name) {
   blockgroup_pop_and_voting_data <- merge(blockgroup_pop_and_voting_data, blocks.income)
   blockgroup_pop_and_voting_data <- merge(blockgroup_pop_and_voting_data, blocks.age)
   
+  #if age or income is missing, replace with mean value
+  blockgroup_pop_and_voting_data$overall_median_income <- ifelse(is.na(blockgroup_pop_and_voting_data$overall_median_income),
+                                                                 mean(blockgroup_pop_and_voting_data$overall_median_income,na.rm = TRUE),
+                                                                 blockgroup_pop_and_voting_data$overall_median_income)
+  
+  
+  blockgroup_pop_and_voting_data$overall_median_age <- ifelse(is.na(blockgroup_pop_and_voting_data$overall_median_age),
+                                                                 mean(blockgroup_pop_and_voting_data$overall_median_age,na.rm = TRUE),
+                                                                 blockgroup_pop_and_voting_data$overall_median_age)
+  
   return(blockgroup_pop_and_voting_data)
 }
 
