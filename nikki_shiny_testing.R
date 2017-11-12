@@ -4,11 +4,54 @@ library(shiny)
 library(mapview)
 library(RColorBrewer)
 
-
 library(scales)
 library(lattice)
 library(dtplyr)
 library(htmltools)
+
+
+# install.packages('RMySQL')
+library(dplyr)
+library(RMySQL)
+
+# database connection
+host="redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com"
+port=3306
+dbname="data"
+user="master"
+password="redistrictr"
+
+my_db=src_mysql(dbname=dbname,host=host,port=port,user=user,password=password)
+src_tbls(my_db)
+
+# upload tables into db ('data')
+setwd("~/Documents/MIDS/redistrictr")
+assignments = read.csv("./Data/assignments.csv", header=T)
+assignments$id = as.factor(assignments$id)
+assignments$solution_id = as.factor(assignments$solution_id)
+assignments$geoid = as.factor(assignments$geoid)
+assignments$assignment = as.factor(assignments$assignment)
+copy_to(my_db, assignments, temporary=F)
+
+a = tbl(my_db, "assignments")
+# a %>% distinct(geoid) %>% count() = number of geoids
+
+solutions = read.csv("./Data/solutions.csv", header=T)
+solutions$id = as.factor(solutions$id)
+solutions$target_id = as.factor(solutions$target_id)
+copy_to(my_db, solutions, temporary=F)
+
+
+targets = read.csv("./Data/targets.csv", header=T)
+targets$id = as.factor(targets$id)
+copy_to(my_db, targets, temporary=F)
+
+src_tbls(my_db)
+
+# END DB CONNECTION
+
+
+
 
 # use CA spatial data
 CA = CA_block_group_shapes
