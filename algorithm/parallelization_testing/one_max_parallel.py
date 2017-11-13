@@ -3,6 +3,7 @@
 #install deap with easy install deap
 
 import random
+import socket
 
 from deap import base
 from deap import creator
@@ -14,7 +15,6 @@ from deap import tools
 from scoop import futures
 
 from time import time
-
 
 
 #Create fitnessmax class
@@ -115,6 +115,7 @@ def main(CXPB = 0.1, MUTPB = 0.3):
         print("  Max %s" % max(fits))
         print("  Avg %s" % mean)
         print("  Std %s" % std)
+        print(socket.gethostname())
     
 
 
