@@ -116,14 +116,16 @@ def main(CXPB = 0.1, MUTPB = 0.3):
         print("  Avg %s" % mean)
         print("  Std %s" % std)
         print(socket.gethostname())
+        print(scoop.worker)
     
 
 
 #Call the function
-start_time = time()
-main()
-end_time = time()
+if __name__ == "__main__":
+	start_time = time()
+	main()
+	end_time = time()
 
-print end_time - start_time
+	print end_time - start_time
 
 
