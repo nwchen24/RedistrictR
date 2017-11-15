@@ -13,6 +13,7 @@ from deap import tools
 #This line is causing issues, specifically, getting a gaierror
 #To fix this error, at least on mac, I had to enable any type of sharing in System Preferences > Sharing
 from scoop import futures
+import scoop
 
 from time import time
 
