@@ -117,7 +117,7 @@ def main(CXPB = 0.1, MUTPB = 0.3):
         print("  Avg %s" % mean)
         print("  Std %s" % std)
         print(socket.gethostname())
-        print(scoop.worker)
+#        print(scoop.worker)
     
 
 
