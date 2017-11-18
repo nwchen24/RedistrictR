@@ -1,6 +1,7 @@
 library(sp)
 library(leaflet)
 library(shiny)
+library(shinythemes)
 library(mapview)
 library(RColorBrewer)
 
@@ -15,51 +16,70 @@ library(dplyr)
 library(RMySQL)
 
 # database connection
-host="redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com"
-port=3306
-dbname="data"
-user="master"
-password="redistrictr"
-
-my_db=src_mysql(dbname=dbname,host=host,port=port,user=user,password=password)
-src_tbls(my_db)
-
-# upload tables into db ('data')
-setwd("~/Documents/MIDS/redistrictr")
-assignments = read.csv("./Data/assignments.csv", header=T)
-assignments$id = as.factor(assignments$id)
-assignments$solution_id = as.factor(assignments$solution_id)
-assignments$geoid = as.factor(assignments$geoid)
-assignments$assignment = as.factor(assignments$assignment)
-copy_to(my_db, assignments, temporary=F)
-
-a = tbl(my_db, "assignments")
-# a %>% distinct(geoid) %>% count() = number of geoids
-
-solutions = read.csv("./Data/solutions.csv", header=T)
-solutions$id = as.factor(solutions$id)
-solutions$target_id = as.factor(solutions$target_id)
-copy_to(my_db, solutions, temporary=F)
+getTables = function(host="redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com",
+                     port=3306,
+                     dbname="data",
+                     user="master",
+                     password="redistrictr") {
+  my_db = src_mysql(dbname=dbname,host=host,port=port,user=user,password=password)
+  # src_tbls(my_db)
+  
+  # read tables
+  return(list(assignments = as.data.frame(tbl(my_db, "assignments")),
+         solutions = as.data.frame(tbl(my_db, "solutions")),
+         targets = as.data.frame(tbl(my_db, "targets"))))
+}
 
 
-targets = read.csv("./Data/targets.csv", header=T)
-targets$id = as.factor(targets$id)
-copy_to(my_db, targets, temporary=F)
-
-src_tbls(my_db)
-
-# END DB CONNECTION
-
+# ONE TIME SET UP: upload tables into db ('data')
+# ------------------------------------------------
+# setwd("~/Documents/MIDS/redistrictr")
+# assignments = read.csv("./Data/assignments.csv", header=T)
+# assignments$id = as.factor(assignments$id)
+# assignments$solution_id = as.factor(assignments$solution_id)
+# assignments$geoid = as.factor(assignments$geoid)
+# assignments$assignment = as.factor(assignments$assignment)
+# copy_to(my_db, assignments, temporary=F)
+# 
+# solutions = read.csv("./Data/solutions.csv", header=T)
+# solutions$id = as.factor(solutions$id)
+# solutions$target_id = as.factor(solutions$target_id)
+# copy_to(my_db, solutions, temporary=F)
+# 
+# targets = read.csv("./Data/targets.csv", header=T)
+# targets$id = as.factor(targets$id)
+# copy_to(my_db, targets, temporary=F)
 
 
 
-# use CA spatial data
-CA = CA_block_group_shapes
-sd_join = merge(CA, SD_blockgroup_pop_and_voting_data, by="GEOID")
+# function to get unique solution_id's from assignments table
+getNumSol = function() {
+  n = a %>% distinct(solution_id) %>% count() %>% collect()
+  return(n$n)
+}
+
+# function to return dataframe of geoid and assignment given a solution_id
+getAssignments = function(sol_id) {
+  subset = filter(a, solution_id == sol_id) %>% collect()
+  return(as.data.frame(subset[,c("geoid","assignment")]))
+}
+
+
+
+
+# read data from database
+tables = getTables()
+a = tables$assignments # assignments per solution_id
+s = tables$solutions # solution_id, target_id, calculations
+t = tables$targets # target_id & what is being optimized
+
+
+data = merge(CA_block_group_shapes, SD_blockgroup_pop_and_voting_data_2, "GEOID")
+data$GEOID = as.numeric(data$GEOID)
 
 
 # get some colorzzz
-colors = c(RColorBrewer::brewer.pal(10, 'Spectral'),RColorBrewer::brewer.pal(6, 'Dark2'))
+colors = c(RColorBrewer::brewer.pal(5, 'Set2'))
 
 # Define UI ----
 ui <- fluidPage(
@@ -89,9 +109,9 @@ ui <- fluidPage(
         column(width=3,
                selectInput("optfactor",
                            choices = list("Compactness" = 'compactness',
-                                          "Vote Efficiency" = 'efficiency',
+                                          "Vote Efficiency" = 'vote_efficiency',
                                           "Communities of Interest" = 'communities',
-                                          "Majority Minority" = 'majmin'),
+                                          "Geographic Cluster" = 'cluster_proximity'),
                            label = "",
                            selected = 'compactness'))
         ),
@@ -146,85 +166,122 @@ ui <- fluidPage(
 # Define server logic ----
 server <- function(input, output, session) {
   
+  # take the solution set that is optimized for the selected optimization factor (optfactor) (100 solutions) 
+  # and order by the optimization factor to get the 6 best solutions
+  solution_subset = reactive({
+    return(s[s$target_id==t[t[,input$optfactor]==1,"id"],][order(s[s$target_id==t[t[,input$optfactor]==1,"id"],][,input$optfactor], decreasing=T),])
+    })
+  
+  # get the data for the county selected
+  selected = reactive({
+    return(data[data$COUNTYFP.x==input$county,])
+  })
+  
+  getAssignments = reactive({
+    function(sol_id) {
+    subset = filter(a, solution_id == sol_id) %>% collect()
+    return(as.data.frame(subset[,c("geoid","assignment")]))
+    }
+  })
+  
+
   output$map1 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
-                     options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
-                color = "#444444", weight = .3, smoothFactor = 0.5,
-                opacity = 1.0, fillOpacity = 0.9,
-                fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
-                highlightOptions = highlightOptions(color = "white", weight=1,
-                                                    bringToFront = TRUE),
-                label = ~htmlEscape(existing_district))
+                       options = providerTileOptions(attribution=NULL)) %>%
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[1,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
+                  color = "#444444", weight = .3, smoothFactor = 0.5,
+                  opacity = 1.0, fillOpacity = 0.9,
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                  highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                      bringToFront = TRUE),
+                  label = ~htmlEscape(assignment))
   })
 
   output$map2 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[2,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
                   color = "#444444", weight = .3, smoothFactor = 0.5,
                   opacity = 1.0, fillOpacity = 0.9,
-                  fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
                   highlightOptions = highlightOptions(color = "white", weight = 1,
                                                       bringToFront = TRUE),
-                  label = ~htmlEscape(existing_district))
+                  label = ~htmlEscape(assignment))
   })
-  
+
   output$map3 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[3,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
                   color = "#444444", weight = .3, smoothFactor = 0.5,
                   opacity = 1.0, fillOpacity = 0.9,
-                  fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
                   highlightOptions = highlightOptions(color = "white", weight = 1,
                                                       bringToFront = TRUE),
-                  label = ~htmlEscape(existing_district))
+                  label = ~htmlEscape(assignment))
   })
-  
+
   output$map4 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[4,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
                   color = "#444444", weight = .3, smoothFactor = 0.5,
                   opacity = 1.0, fillOpacity = 0.9,
-                  fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
                   highlightOptions = highlightOptions(color = "white", weight = 1,
                                                       bringToFront = TRUE),
-                  label = ~htmlEscape(existing_district))
+                  label = ~htmlEscape(assignment))
   })
-  
-  
+
+
   output$map5 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[5,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
                   color = "#444444", weight = .3, smoothFactor = 0.5,
                   opacity = 1.0, fillOpacity = 0.9,
-                  fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
                   highlightOptions = highlightOptions(color = "white", weight = 1,
                                                       bringToFront = TRUE),
-                  label = ~htmlEscape(existing_district))
+                  label = ~htmlEscape(assignment))
   })
-  
+
   output$map6 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(providers$Stamen.TonerLite,
                        options = providerTileOptions(attribution=NULL)) %>%
-      addPolygons(data = sd_join[sd_join$COUNTYFP.x==input$county,],
+      addPolygons(data = merge(selected(),
+                               getAssignments()(solution_subset()[6,]$id),
+                               by.x='GEOID',
+                               by.y='geoid'),
                   color = "#444444", weight = .3, smoothFactor = 0.5,
                   opacity = 1.0, fillOpacity = 0.9,
-                  fillColor = ~colorQuantile(colors[1:10], as.numeric(existing_district))(as.numeric(existing_district)),
+                  fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
                   highlightOptions = highlightOptions(color = "white", weight = 1,
                                                       bringToFront = TRUE),
-                  label = ~htmlEscape(existing_district))
+                  label = ~htmlEscape(assignment))
   })
-  
+
 }
 
 
