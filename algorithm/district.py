@@ -13,6 +13,7 @@ max_mutation_units = None
 pop_threshold = 0.05
 pop_min = -1
 pop_max = -1
+debug = False
 
 
 
@@ -101,8 +102,8 @@ def edge_units(ind, src, dst):
     # Set of all units found
     units = set()
 
-    src_zone = np.nonzero(ind == src)[0]
-    dst_zone = np.nonzero(ind == dst)[0]
+    src_zone = np.nonzero(np.array(ind) == src)[0]
+    dst_zone = np.nonzero(np.array(ind) == dst)[0]
 
     # For each unit u in the source zone...
     for u in src_zone:
@@ -168,7 +169,11 @@ def contiguity_check(ind, subzone, src):
                 G[u].append(v)
 
     # Get the length of the number of units found by a breadth-first search of G
-    c = len(bfs(G, list(G.keys())[0]))
+    gkeys = list(G.keys())
+    if len(gkeys) > 0:
+        c = len(bfs(G, list(G.keys())[0]))
+    else:
+        c = 0
 
     # If c = len(neighbors, then all adjacent, same-zoned units can still reach each other without subzone present.
     # This indicates that the source zones has not been split.
@@ -231,7 +236,6 @@ def initial(k):
     return list(sol)
 
 def solutionFromSplits(k, splits):
-    print(k)
     n = len(splits)
 
     splitAssign = np.zeros(data.shape[0], dtype=np.int32)
@@ -254,7 +258,11 @@ def solutionFromSplits(k, splits):
     # This part is very similar to initial, but modded to take direct input
     splitSol = np.zeros(n, dtype=np.int32)
 
-    seeds = np.random.choice(d[outer > 0], k, replace=False)
+    if d[outer > 0].shape[0] >= k:
+        seeds = np.random.choice(d[outer > 0], k, replace=False)
+    else:
+        seeds = np.random.choice(d, k, replace=False)
+
     for i, v in enumerate(seeds):
         splitSol[v] = i+1
     pool = seeds.tolist()
@@ -283,10 +291,14 @@ def solutionFromSplits(k, splits):
 # Functions used to make evolutionary changes to solutions.
 #################################################################################################
 
+def print_debug(message):
+    if debug:
+        print(message)
 
 # src and dst are adjacent zones
 def shift(ind, src, dst, units=max_mutation_units):
-    print(units)
+    print_debug("Source: %s; Destination: %s" % (src, dst))
+    print_debug("Max Units: %s" % units)
     """
     Given an individual solution (ind), and zone ids for the source and destination (src and dst), shift up to
     max_mutation_units from the source to the destination, without violating contiguity or population constraints.
@@ -303,6 +315,7 @@ def shift(ind, src, dst, units=max_mutation_units):
     # Randomly select up to two adjacent units in src bordering on dst
     # TODO: current code only selects one
     eu = edge_units(ind, src, dst)
+    print_debug("Edge Units: %s" % eu)
     if len(eu) == 0:
         return ind
 
@@ -327,7 +340,7 @@ def shift(ind, src, dst, units=max_mutation_units):
         for i in subzone:
             ind[i] = dst
     else:
-        print("Move tossed")
+        print_debug("Move tossed for breaking contiguity")
 
     return ind
 
@@ -336,16 +349,20 @@ def mutate(ind):
     k = np.unique(ind).shape[0]
     zones = [i for i in range(1, k+1)]
     np.random.shuffle(zones)
+    # print(zones)
 
     for src in zones:
         pops, pop_eval = pop_summary(ind)
+        # print(pops, pop_eval)
         if pops[src] > pop_min:
             zadj = zone_adjacency(ind)
-            dst = np.random.choice(zadj[src], 1)
-            print(src, dst)
+            dst = np.random.choice(zadj[src], 1)[0]
+            print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
             ind = shift(ind, src, dst, units=max_mutation_units)
+        # else:
+        #     print("[MUTATE] Skipped shift from %s because of pop_min check." % src)
 
-    return ind
+    return list(ind)
 
 
 def crossover(ind1, ind2):
@@ -572,7 +589,10 @@ def pop_repair(ind):
 
 
 def evaluate(ind):
-    return compactness(ind), vote_efficiency_gap(ind), cluster_proximity("all_cluster", ind)
+    # return compactness(ind), vote_efficiency_gap(ind), cluster_proximity("all_cluster", ind)
+    return compactness(ind),
+    # return cluster_proximity("all_cluster", ind),
+    # return compactness(ind),
 
 def initDistrict(container, k):
     return container(initial(k))
