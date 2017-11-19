@@ -29,7 +29,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 
 #This is for parallelizing
-#toolbox.register("map", futures.map)
+toolbox.register("map", futures.map)
 
 #This will be used to generate random integers that will make up individuals
 toolbox.register("attr_bool", random.randint, 0, 1)
@@ -61,7 +61,7 @@ def main(CXPB = 0.1, MUTPB = 0.3):
     pop = toolbox.population(n=300)
     
     # Evaluate the entire population
-    fitnesses = list(map(toolbox.evaluate, pop))
+    fitnesses = list(toolbox.map(toolbox.evaluate, pop))
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = [fit]
     
@@ -81,7 +81,7 @@ def main(CXPB = 0.1, MUTPB = 0.3):
         offspring = toolbox.select(pop, len(pop))
         
         # Clone the selected individuals
-        offspring = list(map(toolbox.clone, offspring))
+        offspring = list(toolbox.map(toolbox.clone, offspring))
         
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -97,7 +97,7 @@ def main(CXPB = 0.1, MUTPB = 0.3):
                 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = map(toolbox.evaluate, invalid_ind)
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = [fit]
             
@@ -116,8 +116,6 @@ def main(CXPB = 0.1, MUTPB = 0.3):
         print("  Max %s" % max(fits))
         print("  Avg %s" % mean)
         print("  Std %s" % std)
-        print(socket.gethostname())
-#        print(scoop.worker)
     
 
 
@@ -126,7 +124,6 @@ if __name__ == "__main__":
 	start_time = time()
 	main()
 	end_time = time()
-
-	print end_time - start_time
+	print(end_time - start_time)
 
 
