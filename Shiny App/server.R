@@ -54,6 +54,58 @@ server <- function(input, output, session) {
   
   map_theme = providers$CartoDB.DarkMatterNoLabels
   
+  output$compactness = renderPlot({
+    ggplot(solution_subset(), aes(round(compactness,2))) +
+      xlab("Compactness Score") +
+      geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
+      theme(panel.background = element_blank(),
+            plot.background = element_blank(),
+            panel.grid = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x= element_text(color="white"),
+            axis.text.x = element_text(color="white"),
+            axis.title.y = element_blank(),
+            axis.text.y = element_blank())
+  },
+  bg="transparent",
+  execOnResize = TRUE
+  )
+  
+  output$vote_efficiency = renderPlot({
+    ggplot(solution_subset(), aes(round(vote_efficiency,2))) +
+      xlab("Vote Efficiency Score") +
+      geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
+      theme(panel.background = element_blank(),
+            plot.background = element_blank(),
+            panel.grid = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x= element_text(color="white"),
+            axis.text.x = element_text(color="white"),
+            axis.title.y = element_blank(),
+            axis.text.y = element_blank())
+  },
+  bg="transparent",
+  execOnResize = TRUE
+  )
+  
+  output$cluster_proximity = renderPlot({
+    ggplot(solution_subset(), aes(round(cluster_proximity,2))) +
+      xlab("Geographic Cluster Score") +
+      geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
+      theme(panel.background = element_blank(),
+            plot.background = element_blank(),
+            panel.grid = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x= element_text(color="white"),
+            axis.text.x = element_text(color="white"),
+            axis.title.y = element_blank(),
+            axis.text.y = element_blank())
+  },
+  bg="transparent",
+  execOnResize = TRUE
+  )
+  
+  
   output$map1 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(map_theme,

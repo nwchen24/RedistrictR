@@ -5,6 +5,6 @@ account: nicoleeel
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 237095
-bundleId: 1082751
+bundleId: 1083623
 url: https://nicoleeel.shinyapps.io/shiny_app/
-when: 1510999020.73032
+when: 1511058280.46709

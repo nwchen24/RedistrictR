@@ -31,22 +31,60 @@ fluidPage(
   
   theme=shinytheme("slate"),
   
+  tags$head(
+    tags$style(HTML('
+
+      body {
+        font-weight:300;
+      }
+
+      h1,h2,h3,h4,.h1,.h2,.h3,.h4 {
+        font-weight: 300;
+      }
+
+      .navbar {
+        font-weight: 300;
+      }
+
+      #county+ div>.selectize-input {
+        background-color: #272B30;
+        color: #fff;
+      }
+
+      #county+ div>.selectize-dropdown {
+        background-color: #272B30;
+        color: #fff;
+      }
+
+      #optfactor+ div>.selectize-dropdown {
+        background-color: #272B30;
+        color: #fff;
+        }
+
+      #optfactor+ div>.selectize-input {
+        background-color: #272B30;
+        color: #fff;
+      }
+                    '))
+    ),
+
+  
   navbarPage(
-    "redistrictR",
+    "redistrictR", 
     
     tabPanel("Application",
              fluidRow(
                # class = "header",
-               column(width=2,
-                      h3("County:")),
+               column(width=3,
+                      h3("Choose County:")),
                column(width=3,
                       selectInput(inputId = "county",
                                   choices = list("San Diego" = '073',
                                                  "Los Angeles" = '037'),
                                   label = "",
                                   selected = '073')),
-               column(width=4,
-                      h3("Optimize districts on:")),
+               column(width=3,
+                      h3("Optimize On:")),
                column(width=3,
                       selectInput("optfactor",
                                   choices = list("Compactness" = 'compactness',
@@ -62,10 +100,10 @@ fluidPage(
              fluidRow(
                column(width=4,
                       h3("Results"),
-                      strong("Contiguity"), hr(), br(),br(),
-                      strong("Compactness"), hr(), br(),br(),
-                      strong("Vote Efficiency"), hr(), br(),br(),
-                      strong("Majoriy Minority")),
+                      plotOutput('compactness', height="150px"),
+                      plotOutput('vote_efficiency', height="150px"),
+                      plotOutput('cluster_proximity', height="150px")
+               ),
                
                column(width=8,
                       h3("Most Optimal District Maps"),

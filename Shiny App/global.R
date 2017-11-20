@@ -39,9 +39,7 @@ getTables = function(host="redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com"
   return(list(assignments = as.data.frame(tbl(my_db, "assignments")),
               solutions = as.data.frame(tbl(my_db, "solutions")),
               targets = as.data.frame(tbl(my_db, "targets"))))
-  
-  on.exit(dbDisconnect(my_db), add = TRUE)
-}
+  }
 
 
 # get tables from rdb
@@ -51,7 +49,7 @@ s = tables$solutions # solution_id, target_id, calculations
 t = tables$targets # target_id & what is being optimized
 
 # get base data
-load("./SD_blockgroup_pop_voting_and_shapes.RData")
+load("SD_blockgroup_pop_voting_and_shapes.RData")
 data = merge(CA_block_group_shapes, SD_blockgroup_pop_and_voting_data_2, "GEOID")
 data$GEOID = as.numeric(data$GEOID)
 
