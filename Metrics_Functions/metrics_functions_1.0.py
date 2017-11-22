@@ -84,3 +84,31 @@ def vote_efficiency_gap_calc(df,assignment_list):
     
     return(efficiency_gap_pct)
 
+
+#***************************************************************************
+#Unit Integrity Function
+#***************************************************************************
+def tract_integrity_calc(df, assignment_list):
+
+    df['assignment'] = assignment_list
+    
+    #get total number of block groups in each tract
+    groupedby_tract = pd.DataFrame(df.groupby(by=['TRACTCE']).size())
+    groupedby_tract = groupedby_tract.reset_index()
+    groupedby_tract.columns = ['TRACTCE', 'TOTAL_blockgroups']
+
+    #group by tract and assignment and count the number of block groups in each tract that end up in each assignment
+    groupedby_tract_assignment = pd.DataFrame(df.groupby(by=['TRACTCE', 'assignment']).size())
+    groupedby_tract_assignment = groupedby_tract_assignment.reset_index()
+    groupedby_tract_assignment.columns = ['TRACTCE', 'assignment', 'num_blockgroups']
+
+    #merge total number of block groups in each tract with the grouped by tract and assignment
+    groupedby_tract_assignment = pd.merge(groupedby_tract, groupedby_tract_assignment)
+
+    #flag tracts that are split up
+    groupedby_tract_assignment['flag_split_tract'] = np.where(groupedby_tract_assignment['num_blockgroups'] != groupedby_tract_assignment['TOTAL_blockgroups'], 1, 0)
+
+    return np.mean(groupedby_tract_assignment['flag_split_tract'])
+
+
+
