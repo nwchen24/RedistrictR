@@ -6,6 +6,9 @@ from math import pi, floor, ceil
 from random import randint
 import copy
 
+#NC add for dynamic selection of evaluation function
+import pymysql.cursors
+
 data = None
 adjacency = None
 edges = None
@@ -15,8 +18,8 @@ pop_min = -1
 pop_max = -1
 debug = False
 
-
-
+#NC add for dynamic selection of evaluation function
+weights_raw = None
 
 #################################################################################################
 # UTILITIES
@@ -587,12 +590,27 @@ def pop_repair(ind):
     print(pops, pop_eval)
     return ind
 
+#*****************************************************
+#smart dispatcher that uses the column names in the target DB table
+#This dispatcher is a dict that maps column names from the target DB references to each of the evaluation metric functions defined in this file
+#Keys are the names of the columns in the target DB table
+#if we add additional functionality to incorporate other evaluation metrics, they will need to be added to this dispatcher in the forma of:
+#{target DB table col: function in this file}
+dispatcher = {'compactness': compactness, 'vote_efficiency': vote_efficiency_gap, 'cluster_proximity':cluster_proximity}
 
 def evaluate(ind):
-    # return compactness(ind), vote_efficiency_gap(ind), cluster_proximity("all_cluster", ind)
-    return compactness(ind),
-    # return cluster_proximity("all_cluster", ind),
-    # return compactness(ind),
+
+    #instantiate a list to hold the evaluation metric functions we want to incorporate
+    func_list = []
+
+    #weights_raw is the table row pulled from the target table of the DB
+    #if the flag for a given evaluation metric is equal to 1 in that row of the target table,
+    #then that evaluation metric will be included in the evaluation function fed to the algorithm
+    for i in weights_raw.keys():
+        if (weights_raw[i] == 1) & (i != "id"):
+            func_list.append(dispatcher[i](ind))
+
+    return tuple(func_list)
 
 def initDistrict(container, k):
     return container(initial(k))
