@@ -84,3 +84,61 @@ def vote_efficiency_gap_calc(df,assignment_list):
     
     return(efficiency_gap_pct)
 
+
+#***************************************************************************
+#Unit Integrity Function
+#***************************************************************************
+def unit_integrity_calc(df, assignment_list):
+
+    df['assignment'] = assignment_list
+    
+    #*************************************
+    #Tract penalty
+    #Penalize one point for each tract that is split up
+    #This penalty has a max value of 1 and a min value of zero if no tract is split up
+    #*************************************
+    
+    #get total number of block groups in each tract
+    groupedby_tract = pd.DataFrame(df.groupby(by=['TRACTCE']).size())
+    groupedby_tract = groupedby_tract.reset_index()
+    groupedby_tract.columns = ['TRACTCE', 'TOTAL_blockgroups']
+
+    #group by tract and assignment and count the number of block groups in each tract that end up in each assignment
+    groupedby_tract_assignment = pd.DataFrame(df.groupby(by=['TRACTCE', 'assignment']).size())
+    groupedby_tract_assignment = groupedby_tract_assignment.reset_index()
+    groupedby_tract_assignment.columns = ['TRACTCE', 'assignment', 'num_blockgroups']
+
+    #merge total number of block groups in each tract with the grouped by tract and assignment
+    groupedby_tract_assignment = pd.merge(groupedby_tract, groupedby_tract_assignment)
+
+    #flag tracts that are split up
+    groupedby_tract_assignment['flag_split_tract'] = np.where(groupedby_tract_assignment['num_blockgroups'] != groupedby_tract_assignment['TOTAL_blockgroups'], 1, 0)
+
+    tract_penalty = np.mean(groupedby_tract_assignment['flag_split_tract'])
+
+    #*************************************
+    #Place penalty
+    #Penalize one point for a place that is split into two districts, two points for a place that is split into three districts, etc.
+    #This penalty has a max value of 1 and a min value of zero if no place is split up
+    #*************************************
+
+    #group by place and asignment
+    grouped_by_place_assignment = pd.DataFrame(df.groupby(by=['PLACEFP', 'assignment']).size())
+    grouped_by_place_assignment = grouped_by_place_assignment.reset_index()
+    grouped_by_place_assignment.columns = ['PLACEFP', 'assignment', 'count_of_blockgroups']
+    grouped_by_place_assignment.head()
+
+    #group by place to get the number of districts into which each place is split
+    grouped_by_place = pd.DataFrame(grouped_by_place_assignment.groupby(by = ['PLACEFP']).size())
+    grouped_by_place = grouped_by_place.reset_index()
+    grouped_by_place.columns = ['PLACEFP', 'count_of_districts']
+
+    #Penalize
+    #0 points if the place is in one district, 1 point if it is in 2 districts, 2 points if it is in 3 districts, etc.
+    grouped_by_place['penalty'] = grouped_by_place.count_of_districts - 1
+
+    #Get total penalty
+    place_penalty = float(np.sum(grouped_by_place.penalty)) / (float(grouped_by_place.shape[0]) * 10 )
+    
+    return tract_penalty + place_penalty
+
