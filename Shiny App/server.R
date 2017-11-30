@@ -28,8 +28,36 @@ library(htmltools)
 
 library(dplyr)
 library(RMySQL)
+library(ggplot2)
 
 
+
+# define function for grabbing tables from rdb
+getTables = function(host="redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com",
+                     port=3306,
+                     dbname="data",
+                     user="master",
+                     password="redistrictr") {
+  my_db = src_mysql(dbname=dbname,host=host,port=port,user=user,password=password)
+  # src_tbls(my_db)
+  
+  # read tables
+  return(list(assignments = tbl(my_db, "assignments"),
+              solutions = as.data.frame(tbl(my_db, "solutions")),
+              targets = as.data.frame(tbl(my_db, "targets"))))
+}
+
+
+# get tables from rdb
+tables = getTables()
+a = tables$assignments # assignments per solution_id
+s = tables$solutions # solution_id, target_id, calculations
+t = tables$targets # target_id & what is being optimized
+
+# get base data
+load("./SD_all_data.RData")
+data = merge(SD_block_group_shapes, SD_blockgroup_pop_and_voting_data_2, "GEOID", all.x=FALSE)
+data$GEOID = as.numeric(data$GEOID)
 
 
 server <- function(input, output, session) {
