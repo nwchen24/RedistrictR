@@ -3,6 +3,7 @@ library(rgeos)
 library(sp)
 library(raster)
 library(Matrix)
+library(rstudioapi)
 
 # Functions
 get_adjacency <- function(shapes) {
@@ -30,7 +31,18 @@ get_adjacency <- function(shapes) {
 }
 
 # Load Nick's Data
-load("data/SD_blockgroup_pop_voting_w_clusters.RData")
+
+#set working directory to directory where this file is stored.
+current_path <- getActiveDocumentContext()$path 
+setwd(dirname(current_path))
+getwd()
+#setwd("/Users/nwchen24/Desktop/UC_Berkeley/w210_capstone/github_repo/")
+load("../data/SD_blockgroup_pop_voting_and_shapes_w_clusters_places.RData")
+
+#convert the new SD blockgroup data to the format expected by this code
+SD_blockgroup_pop_and_voting_data <- SD_blockgroup_pop_and_voting_data_2
+SD_blockgroup_pop_and_voting_data$GEOID <- as.character(SD_blockgroup_pop_and_voting_data$GEOID)
+SD_blockgroup_pop_and_voting_data$GEOID <- paste0('0', SD_blockgroup_pop_and_voting_data$GEOID)
 
 # Filter shapes list to match
 SD_blockgroup_shapes <- CA_block_group_shapes[CA_block_group_shapes@data$GEOID %in% SD_blockgroup_pop_and_voting_data$GEOID,]
@@ -48,15 +60,15 @@ SD_adjacency <- get_adjacency(SD_blockgroup_shapes)
 SD_blockgroup_pop_and_voting_data$outer_edge <- SD_blockgroup_pop_and_voting_data$perimeter - Matrix::colSums(SD_adjacency$edges)
 SD_blockgroup_pop_and_voting_data[SD_blockgroup_pop_and_voting_data$outer_edge < 0.00001,"outer_edge"] <- 0
 
-write.csv(SD_blockgroup_pop_and_voting_data, "data/SD_data.csv")
-Matrix::writeMM(SD_adjacency$adjacency, "data/SD_adjacency.mtx")
-Matrix::writeMM(SD_adjacency$edges, "data/SD_edges.mtx")
+write.csv(SD_blockgroup_pop_and_voting_data, "../data/SD_data.csv")
+Matrix::writeMM(SD_adjacency$adjacency, "../data/SD_adjacency.mtx")
+Matrix::writeMM(SD_adjacency$edges, "../data/SD_edges.mtx")
 
-test_solution <- read.csv("data/initial.csv", header=FALSE)
+test_solution <- read.csv("../data/initial.csv", header=FALSE)
 test_solution_shapes <- maptools::unionSpatialPolygons(SD_blockgroup_shapes, test_solution$V1)
 plot(test_solution_shapes, col=c('#7fc97f','#beaed4','#fdc086','#ffff99','#386cb0'), border=NA)
 
-test_solution <- read.csv("data/mutate.csv", header=FALSE)
+test_solution <- read.csv("../data/mutate.csv", header=FALSE)
 test_solution_shapes <- maptools::unionSpatialPolygons(SD_blockgroup_shapes, test_solution$V1)
 plot(test_solution_shapes, col=c('#7fc97f','#beaed4','#fdc086','#ffff99','#386cb0'), border=NA)
 
