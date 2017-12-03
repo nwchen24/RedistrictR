@@ -612,5 +612,20 @@ def evaluate(ind):
 
     return tuple(func_list)
 
+#supplementary helper evaluate function to be able to get the order of the 
+def evaluate_metric_order_helper(ind):
+
+    #instantiate a list to hold the evaluation metric functions we want to incorporate
+    func_list = []
+
+    #weights_raw is the table row pulled from the target table of the DB
+    #if the flag for a given evaluation metric is equal to 1 in that row of the target table,
+    #then that evaluation metric will be included in the evaluation function fed to the algorithm
+    for i in weights_raw.keys():
+        if (weights_raw[i] == 1) & (i != "id"):
+            func_list.append(dispatcher[i].__name__)
+
+    return func_list
+
 def initDistrict(container, k):
     return container(initial(k))
