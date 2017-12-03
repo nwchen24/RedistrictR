@@ -24,6 +24,7 @@ library(htmltools)
 
 library(dplyr)
 library(RMySQL)
+library(ggplot2)
 
 
 # start page
