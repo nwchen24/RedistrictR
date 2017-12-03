@@ -4,7 +4,7 @@ from collections import defaultdict
 from random import randint
 from math import pi, floor, ceil
 from random import randint
-import copy
+import copy, csv
 
 #NC add for dynamic selection of evaluation function
 import pymysql.cursors
@@ -12,6 +12,7 @@ import pymysql.cursors
 data = None
 adjacency = None
 edges = None
+qadjacency = None
 max_mutation_units = None
 pop_threshold = 0.05
 pop_min = -1
@@ -45,11 +46,16 @@ def pop_summary(ind):
     return pops, pop_eval
 
 
-def pop_repair_units(pops, pop_eval):
-    pop_target = floor(pops.sum())
-    units = (50*(1-(pops/pop_target)**(-pop_eval))).astype("int")+1
+# def pop_repair_units(pops, pop_eval):
+#     pop_target = floor(pops.sum())
+#     units = (50*(1-(pops/pop_target)**(-pop_eval))).astype("int")+1
+#     print("Units: %s" % units)
+#     return units
 
-    return units
+def pop_repair_units(ind, pops, src, dst):
+    src_per_unit = np.floor(pops/data.groupby(ind).size())[src]
+    diff = pops[src] - pops[dst]
+    return floor(diff/(5*src_per_unit))+1
 
 
 def bfs(G, origin):
@@ -134,7 +140,7 @@ def subzone_neighbors(ind, subzone, zid):
     neighbors = set()
 
     # For each adjacency row matching a unit in the subzone...
-    for r in adjacency.rows[subzone]:
+    for r in qadjacency.rows[subzone]:
         # Union in the adjacent units to neighbors
         neighbors |= set(r)
 
@@ -152,6 +158,7 @@ def contiguity_check(ind, subzone, src):
     :param src:
     :return:
     """
+    # print_debug("== Contiguity Check ==")
 
     # If no subzones are being removed, then contiguity is not affected
     if len(subzone) == 0:
@@ -159,6 +166,11 @@ def contiguity_check(ind, subzone, src):
 
     # Get all the units that are neighbors of subzone, and in the same zone.
     neighbors = subzone_neighbors(ind, subzone, src)
+    # print_debug("- Neighbors -")
+    # print_debug(neighbors)
+    # if debug:
+    #     for n in neighbors:
+    #         print(data.loc[n, "GEOID"])
 
     # G is the connectivity graph of the neighbors
     G = {}
@@ -170,6 +182,9 @@ def contiguity_check(ind, subzone, src):
         for v in adjacency.rows[u]:
             if v in neighbors:
                 G[u].append(v)
+
+    # print_debug("- GRAPH -")
+    # print_debug(G)
 
     # Get the length of the number of units found by a breadth-first search of G
     gkeys = list(G.keys())
@@ -189,6 +204,7 @@ def initial(k):
     :param k:
     :return:
     """
+    # print("Initializing solution")
 
 
     # Set n, the number of units to assign
@@ -215,7 +231,7 @@ def initial(k):
     while pool:
         # Get only the zone populations for units available in the pool
         tmp_pops = {i: v for i, v in zone_pops.items() if i in np.unique(sol[pool])}
-        # Find the available zone with the smallest popultaion
+        # Find the available zone with the smallest population
         min_zone = min(tmp_pops, key=tmp_pops.get)
         # Find all the units in the pool that are part of the smallest zone
         min_zone_elements = np.where(sol[pool] == min_zone)
@@ -236,7 +252,10 @@ def initial(k):
                 # Add to the zone population
                 zone_pops[sol[u]] += data.iloc[v]["block_pop_total"]
 
-    return list(sol)
+    ind = list(sol)
+    # print(ind)
+    # print(population_score(ind))
+    return(pop_filter(ind))
 
 def solutionFromSplits(k, splits):
     n = len(splits)
@@ -299,9 +318,9 @@ def print_debug(message):
         print(message)
 
 # src and dst are adjacent zones
-def shift(ind, src, dst, units=max_mutation_units):
-    print_debug("Source: %s; Destination: %s" % (src, dst))
-    print_debug("Max Units: %s" % units)
+def shift(ind, src, dst, units=max_mutation_units, subzone=[]):
+    # print_debug("Source: %s; Destination: %s" % (src, dst))
+    # print_debug("Max Units: %s" % units)
     """
     Given an individual solution (ind), and zone ids for the source and destination (src and dst), shift up to
     max_mutation_units from the source to the destination, without violating contiguity or population constraints.
@@ -315,26 +334,29 @@ def shift(ind, src, dst, units=max_mutation_units):
     # TODO: Check against population constraints
     # TODO: Errors when there aren't valid moves to make (may not be major on larger problems)
 
-    # Randomly select up to two adjacent units in src bordering on dst
-    # TODO: current code only selects one
-    eu = edge_units(ind, src, dst)
-    print_debug("Edge Units: %s" % eu)
-    if len(eu) == 0:
-        return ind
+    if len(subzone) == 0:
+        # Randomly select one adjacent unit in src bordering on dst
+        eu = edge_units(ind, src, dst)
+        if len(eu) == 0:
+            # print_debug("No edge units")
+            return ind
 
-    subzone = [np.random.choice(eu)]
+        subzone = [np.random.choice(eu)]
 
-    # while size of subzone < max mutation units
-    while len(subzone) < units:
-        # Get list of neighbor units of subzone that are in the same zone
-        neighbors = subzone_neighbors(ind, subzone, src)
-        if len(neighbors) > 0:
-            # Get random number q in 1:|U|
-            q = randint(1, len(neighbors))
-            # Randomly choose subset of U with |U'| = q
-            subset = np.random.choice(neighbors, q, replace=False)
-            # subzone = subzone union U'
-            subzone = list(set(subzone) | set(subset))
+        # while size of subzone < max mutation units
+        while len(subzone) < units:
+            # Get list of neighbor units of subzone that are in the same zone
+            neighbors = subzone_neighbors(ind, subzone, src)
+            if len(neighbors) > 0:
+                # Get random number q in 1:|U|
+                q = randint(1, len(neighbors))
+                # Randomly choose subset of U with |U'| = q
+                subset = np.random.choice(neighbors, q, replace=False)
+                # subzone = subzone union U'
+                subzone = list(set(subzone) | set(subset))
+
+    # print_debug(subzone)
+    # print_debug(data.loc[subzone[0], "GEOID"])
 
     if contiguity_check(ind, subzone, src):
         # dst = dst union subzone
@@ -342,8 +364,8 @@ def shift(ind, src, dst, units=max_mutation_units):
         # aka reassign subzone to dst id
         for i in subzone:
             ind[i] = dst
-    else:
-        print_debug("Move tossed for breaking contiguity")
+    # else:
+    #     print_debug("Move tossed for breaking contiguity")
 
     return ind
 
@@ -356,16 +378,16 @@ def mutate(ind):
 
     for src in zones:
         pops, pop_eval = pop_summary(ind)
-        # print(pops, pop_eval)
+        # print_debug(pops, pop_eval)
         if pops[src] > pop_min:
             zadj = zone_adjacency(ind)
             dst = np.random.choice(zadj[src], 1)[0]
             print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
             ind = shift(ind, src, dst, units=max_mutation_units)
         # else:
-        #     print("[MUTATE] Skipped shift from %s because of pop_min check." % src)
+        #     print_debug("[MUTATE] Skipped shift from %s because of pop_min check." % src)
 
-    return list(ind)
+    return pop_filter(list(ind))
 
 
 def crossover(ind1, ind2):
@@ -408,7 +430,8 @@ def crossover(ind1, ind2):
             G = copy.deepcopy(ng)
 
     #print(newSplits)
-    return solutionFromSplits(k, newSplits)
+    ind = solutionFromSplits(k, newSplits)
+    return pop_filter(ind)
 
 
 #################################################################################################
@@ -523,6 +546,7 @@ def vote_efficiency_gap(ind):
 
     return (efficiency_gap_pct)
 
+
 def zone_adjacency(ind):
     zadj = defaultdict(lambda: [])
     for u in range(0, len(ind)):
@@ -531,13 +555,92 @@ def zone_adjacency(ind):
                 zadj[ind[u]] = list(set(zadj[ind[u]]) | set([ind[v]]))
                 zadj[ind[v]] = list(set(zadj[ind[v]]) | set([ind[u]]))
 
+    # print_debug("- Zone Adjacency -")
+    # print_debug(zadj)
+
     return zadj
+
 
 def population_score(ind):
     pops, _ = pop_summary(ind)
+    # print(pops)
     return (pop_max - pop_min) / (pops.max() - pops.min())
 
+
+def population_score_2(ind):
+    pops, _ = pop_summary(ind)
+    return (pops.max() - pops.min()) / pops.mean()
+
+
+# ***************************************************************************
+# Unit Integrity Function
+# ***************************************************************************
+def unit_integrity_calc(df, assignment_list):
+    df['assignment'] = assignment_list
+
+    # *************************************
+    # Tract penalty
+    # Penalize one point for each tract that is split up
+    # This penalty has a max value of 1 and a min value of zero if no tract is split up
+    # *************************************
+
+    # get total number of block groups in each tract
+    groupedby_tract = pd.DataFrame(df.groupby(by=['TRACTCE']).size())
+    groupedby_tract = groupedby_tract.reset_index()
+    groupedby_tract.columns = ['TRACTCE', 'TOTAL_blockgroups']
+
+    # group by tract and assignment and count the number of block groups in each tract that end up in each assignment
+    groupedby_tract_assignment = pd.DataFrame(df.groupby(by=['TRACTCE', 'assignment']).size())
+    groupedby_tract_assignment = groupedby_tract_assignment.reset_index()
+    groupedby_tract_assignment.columns = ['TRACTCE', 'assignment', 'num_blockgroups']
+
+    # merge total number of block groups in each tract with the grouped by tract and assignment
+    groupedby_tract_assignment = pd.merge(groupedby_tract, groupedby_tract_assignment)
+
+    # flag tracts that are split up
+    groupedby_tract_assignment['flag_split_tract'] = np.where(
+        groupedby_tract_assignment['num_blockgroups'] != groupedby_tract_assignment['TOTAL_blockgroups'], 1, 0)
+
+    tract_penalty = np.mean(groupedby_tract_assignment['flag_split_tract'])
+
+    # *************************************
+    # Place penalty
+    # Penalize one point for a place that is split into two districts, two points for a place that is split into three districts, etc.
+    # This penalty has a max value of 1 and a min value of zero if no place is split up
+    # *************************************
+
+    # group by place and asignment
+    grouped_by_place_assignment = pd.DataFrame(df.groupby(by=['PLACEFP', 'assignment']).size())
+    grouped_by_place_assignment = grouped_by_place_assignment.reset_index()
+    grouped_by_place_assignment.columns = ['PLACEFP', 'assignment', 'count_of_blockgroups']
+    grouped_by_place_assignment.head()
+
+    # group by place to get the number of districts into which each place is split
+    grouped_by_place = pd.DataFrame(grouped_by_place_assignment.groupby(by=['PLACEFP']).size())
+    grouped_by_place = grouped_by_place.reset_index()
+    grouped_by_place.columns = ['PLACEFP', 'count_of_districts']
+
+    # Penalize
+    # 0 points if the place is in one district, 1 point if it is in 2 districts, 2 points if it is in 3 districts, etc.
+    grouped_by_place['penalty'] = grouped_by_place.count_of_districts - 1
+
+    # Get total penalty
+    place_penalty = float(np.sum(grouped_by_place.penalty)) / (float(grouped_by_place.shape[0]) * 10)
+
+    return tract_penalty + place_penalty
+
+
+def pop_filter(ind):
+    if population_score(ind) > 0.1:
+        return pop_repair(ind)
+    else:
+        return initial(np.unique(ind).shape[0])
+
 def pop_repair(ind):
+    # print("Running population repair")
+    # print_debug("=============================")
+    # print_debug("-- Begin Population Repair --")
+    # print_debug("=============================")
     # Initialize number of iterations that have passed
     count = 0
 
@@ -548,7 +651,8 @@ def pop_repair(ind):
     pops, pop_eval = pop_summary(ind)
 
     while np.any(pop_eval != 0):
-        print(pops, pop_eval)
+        # print_debug('\n== Shift Attempt %s ==' % count)
+
         if np.any(pop_eval == 1):
             src = pops.idxmax()
             srcadj = zadj[src]
@@ -559,10 +663,13 @@ def pop_repair(ind):
             #     srcadj = zadj[src]
             #     dst = pops[srcadj].idxmin()
 
-            #ind = shift(ind, src, dst, units=pop_repair_units(pops, pop_eval)[src])
-            ind = shift(ind, src, dst, units=1)
+            #ind = shift(ind, src, dst, units=pop_repair_units(pops, pop_eval)[src]
+
+            ind = shift(ind, src, dst, units=pop_repair_units(ind, pops, src, dst))
             pops, pop_eval = pop_summary(ind)
-            print("High to low: %s, %s" % (src, dst))
+
+            # print_debug("- Shift Attempt: High to Low -")
+            # print_debug("Source: %s; Destination: %s" % (src, dst))
 
         elif np.any(pop_eval == -1):
             dst = pops.idxmin()
@@ -574,20 +681,33 @@ def pop_repair(ind):
             #     dstadj = zadj[dst]
             #     src = pops[dstadj].idxmax()
 
-            ind = shift(ind, src, dst, units1)
+            ind = shift(ind, src, dst, units=pop_repair_units(ind, pops, src, dst))
             pops, pop_eval = pop_summary(ind)
-            print("Low to high: %s, %s" % (src, dst))
+
+            # print_debug("- Shift Attempt: Low to High -")
+            # print_debug("Source: %s; Destination: %s" % (src, dst))
+
+        # print_debug("- Updated Populations -")
+        # print_debug(pops)
+        # print_debug("- Updated Validity -")
+        # print_debug(pop_eval)
+        # print_debug("- Updated Population Score -")
+        # print_debug("Score: %s :: Move: %s->%s (%s)" % (population_score(ind), src, dst, count))
 
         #ind = shift(ind, src, dst, units=5)
         count += 1
-        if(count > 5000):
+        if(count > 3000):
+            # return(ind)
             ind = initial(pops.shape[0])
             count = 0
-        zadj = zone_adjacency(ind)
-        print(count)
-        np.savetxt("../data/progress.csv", ind, fmt="%i")
 
-    print(pops, pop_eval)
+        zadj = zone_adjacency(ind)
+        # print(count)
+        # np.savetxt("../data/progress.csv", ind, fmt="%i")
+        # writeSolution(ind, "000_progress_"+str(count)+".csv")
+
+    # print(pops, pop_eval)
+    # print("Moves required for population repair: %s" % count)
     return ind
 
 #*****************************************************
@@ -614,3 +734,16 @@ def evaluate(ind):
 
 def initDistrict(container, k):
     return container(initial(k))
+
+
+
+
+def writeSolution(ind, filename="assignments.csv"):
+    geoids = data["GEOID"].values
+
+    with open("../data/%s" % filename, "w") as assn:
+        assn_wr = csv.writer(assn, lineterminator="\n")
+        for a, assignment in enumerate(ind):
+            geoid = geoids[a]
+            assn_wr.writerow([geoid, assignment])
+        assn.close()
