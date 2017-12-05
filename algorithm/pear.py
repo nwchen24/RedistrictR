@@ -17,7 +17,7 @@ from sys import argv
 import pymysql.cursors
 
 # Import configuration and initialize the district module
-section = "pear"
+section = "minipear"
 config = configparser.ConfigParser()
 config.read("settings.cfg")
 
@@ -40,7 +40,8 @@ creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 toolbox.register("individual", district.initDistrict, creator.Individual, k)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+# toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
 toolbox.register("mutate", district.mutate)
@@ -96,7 +97,7 @@ def main():
     print("== Building initial population ==")
     pop_start_time = time()
     pop = toolbox.population(n=population_size)
-    fitnesses = list(map(toolbox.evaluate, pop))
+    fitnesses = list(toolbox.map(toolbox.evaluate, pop))
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
     fits = [ind.fitness.values[0] for ind in pop]
@@ -104,13 +105,13 @@ def main():
     pop_duration = pop_end_time - pop_start_time
     print("%s solutions initialized in %s seconds (%s per solution)" % (population_size, pop_duration, floor(pop_duration/population_size)))
     # print(fits)
-
+    print(pop)
 
     # for g in range(1, 501):
     #     print("-- Generation %i --" % g)
     #     generation_start_time = time()
     #     offspring = toolbox.select(pop, population_size)
-    #     offspring = list(map(toolbox.clone, offspring))
+    #     offspring = list(toolbox.map(toolbox.clone, offspring))
     #
     #     for child1, child2 in zip(offspring[::2], offspring[1::2]):
     #         if random.random() < crossover_prob:
@@ -124,7 +125,7 @@ def main():
     #             del mutant.fitness.values
     #
     #     invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-    #     fitnesses = map(toolbox.evaluate, invalid_ind)
+    #     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
     #     for ind, fit in zip(invalid_ind, fitnesses):
     #         ind.fitness.values = fit
     #

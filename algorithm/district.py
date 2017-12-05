@@ -732,10 +732,11 @@ def evaluate(ind):
 
     return tuple(func_list)
 
-def initDistrict(container, k):
+def initDistrict(container, k, _=None):
     return container(initial(k))
 
-
+def initMap(container, func, n, mapfunc=map):
+    return container(mapfunc(func, range(n)))
 
 
 def writeSolution(ind, filename="assignments.csv"):
