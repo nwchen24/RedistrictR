@@ -27,6 +27,7 @@ district.pop_threshold = config.getfloat(section, "pop_threshold")
 
 crossover_prob, mutation_prob = config.getfloat(section, "crossover_prob"), config.getfloat(section, "mutation_prob")
 population_size = config.getint(section, "population_size")
+generations = config.getint(section, "generations")
 
 k = config.getint(section, "num_districts")
 
@@ -50,10 +51,10 @@ toolbox.register("select", tools.selTournament, tournsize=2)
 
 #*********************************************************************
 #create the variable that will hold the result read from the target table in the database
-# weights_raw = None
+weights_raw = None
 
 # TEMP: Remove this after testing
-weights_raw = {"compactness": 1}
+# weights_raw = {"compactness": 1}
 
 #NC get weights from the target table in the database
 #NOTE: Not sure whether this too should be included inside of the main() function
@@ -66,22 +67,22 @@ myargs = utils.getopts(argv)
 #Go to the database and get the row corresponding to the tablerow argument input via the command line
 
 #Connect to the database
-# connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com',
-#     user='master',
-#     password='redistrictr',
-#     db='data',
-#     cursorclass=pymysql.cursors.DictCursor)
-#
-# #Get the weights corresponding to the target table row from the command line
-# try:
-#     with connection.cursor() as cursor:
-#         # Read a single record
-#         sql = "SELECT * FROM `targets` WHERE `id`=%s"
-#         cursor.execute(sql, (str(myargs['-tablerow']),))
-#         weights_raw = cursor.fetchone()
-#
-# finally:
-#     connection.close()
+connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com',
+    user='master',
+    password='redistrictr',
+    db='data',
+    cursorclass=pymysql.cursors.DictCursor)
+
+#Get the weights corresponding to the target table row from the command line
+try:
+    with connection.cursor() as cursor:
+        # Read a single record
+        sql = "SELECT * FROM `targets` WHERE `id`=%s"
+        cursor.execute(sql, (str(myargs['-tablerow']),))
+        weights_raw = cursor.fetchone()
+
+finally:
+    connection.close()
 #
 # #set weights_raw in the district module equal to what was read in from the database
 district.weights_raw = weights_raw
@@ -96,7 +97,11 @@ def main():
 
     print("== Building initial population ==")
     pop_start_time = time()
+
+    # Initialize the population, using the toolbox configured above
     pop = toolbox.population(n=population_size)
+
+    # Calculate fitness scores for the population, and attach to the individuals
     fitnesses = list(toolbox.map(toolbox.evaluate, pop))
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
@@ -104,50 +109,62 @@ def main():
     pop_end_time = time()
     pop_duration = pop_end_time - pop_start_time
     print("%s solutions initialized in %s seconds (%s per solution)" % (population_size, pop_duration, floor(pop_duration/population_size)))
-    # print(fits)
-    print(pop)
 
-    # for g in range(1, 501):
-    #     print("-- Generation %i --" % g)
-    #     generation_start_time = time()
-    #     offspring = toolbox.select(pop, population_size)
-    #     offspring = list(toolbox.map(toolbox.clone, offspring))
-    #
-    #     for child1, child2 in zip(offspring[::2], offspring[1::2]):
-    #         if random.random() < crossover_prob:
-    #             # In onemax this function modifies both in place to turn them into two new options
-    #             # The PEAR version only creates one new solution, not in place. just append to offspring?
-    #             offspring.append(creator.Individual(toolbox.mate(child1, child2)))
-    #
-    #     for mutant in offspring:
-    #         if random.random() < mutation_prob:
-    #             mutant = creator.Individual(toolbox.mutate(mutant))
-    #             del mutant.fitness.values
-    #
-    #     invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-    #     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-    #     for ind, fit in zip(invalid_ind, fitnesses):
-    #         ind.fitness.values = fit
-    #
-    #     pop[:] = offspring
-    #     generation_end_time = time()
-    #     generation_duration = generation_end_time - generation_start_time
-    #
-    #
-    #     # Check performance stats
-    #     fits = [ind.fitness.values[0] for ind in pop]
-    #     length = len(pop)
-    #     mean = sum(fits) / length
-    #     sum2 = sum(x*x for x in fits)
-    #     std = abs(sum2 / length - mean**2)**0.5
-    #
-    #     print("  Min %s" % min(fits))
-    #     print("  Max %s" % max(fits))
-    #     print("  Avg %s" % mean)
-    #     print("  Std %s" % std)
-    #     print("  Pop Count: %s" % len(fits))
-    #     print("\nGeneration completed in %s seconds\n" % generation_duration)
-    #     # print(pop)
+    # Evolve for the number of generations requested
+    for g in range(1, generations+1):
+        print("-- Generation %i --" % g)
+        generation_start_time = time()
+
+        # Use the selection operator to limit the population down to population_size
+        # After each generation the overall population will be slightly larger, due to the crossover operation.
+        offspring = toolbox.select(pop, population_size)
+
+        # Do a deep copy of the offspring, so they do not directly edit the current population
+        offspring = list(toolbox.map(toolbox.clone, offspring))
+
+        # Crossover operation: loop over every possible pair in the population, attempting crossover
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            # Choose pairs to mate via an independent probability
+            if random.random() < crossover_prob:
+                # Run the crossover operation and append the child to the population
+                offspring.append(creator.Individual(toolbox.mate(child1, child2)))
+
+        # Mutation operation: loop over every individual in the population, attempting crossover
+        for mutant in offspring:
+            # Choose which individuals mutate via an independent probability
+            if random.random() < mutation_prob:
+                # Run the mutation operation, which edits the individual in place.
+                mutant = creator.Individual(toolbox.mutate(mutant))
+                # Invalidate the fitness for this individual, because it has changed
+                del mutant.fitness.values
+
+        # Get a list of all the individuals in the offspring with an invalid fitness score.
+        # These are all the new individuals, either children or mutants
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        # Calculate the new fitness scores for these individuals, and attach
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        # Replace the population with the offspring
+        pop[:] = offspring
+        generation_end_time = time()
+        generation_duration = generation_end_time - generation_start_time
+
+        # Post generation operations, like logging and outputting stats
+        fits = [ind.fitness.values[0] for ind in pop]
+        length = len(pop)
+        mean = sum(fits) / length
+        sum2 = sum(x*x for x in fits)
+        std = abs(sum2 / length - mean**2)**0.5
+
+        print("  Min %s" % min(fits))
+        print("  Max %s" % max(fits))
+        print("  Avg %s" % mean)
+        print("  Std %s" % std)
+        print("  Pop Count: %s" % len(fits))
+        print("\nGeneration completed in %s seconds\n" % generation_duration)
+        # print(pop)
     #
     # print(pop)
 
