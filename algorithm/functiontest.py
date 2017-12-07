@@ -10,12 +10,24 @@ section = "functiontest"
 config = configparser.ConfigParser()
 config.read("settings.cfg")
 
-district.data, district.adjacency, district.edges = utils.loadData(config.get(section, "dataset"))
+district.data, district.adjacency, district.edges, district.qadjacency = utils.loadData(config.get(section, "dataset"))
 district.max_mutation_units = config.getint(section, "max_mutation_units")
 district.pop_threshold = config.getfloat(section, "pop_threshold")
 district.debug = True
 
 k = config.getint(section, "num_districts")
+
+
+def writeSolution(ind, filename="assignments.csv"):
+    geoids = district.data["GEOID"].values
+
+    with open("../data/%s" % filename, "a") as assn:
+        assn_wr = csv.writer(assn, lineterminator="\n")
+        for a, assignment in enumerate(ind):
+            geoid = geoids[a]
+            assn_wr.writerow([geoid, assignment])
+        assn.close()
+
 
 def produceSolutions():
     # Produce solutions for Nikki's database
@@ -50,132 +62,67 @@ def produceSolutions():
 
 def main():
     district.pop_min, district.pop_max = district.pop_range(k)
-    # i1 = district.initial(k)
-    # i2 = district.mutate(i1)
-    # i3 = district.crossover(i1, i2)
-    ind = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1,
-           1, 1, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 3, 3, 1, 3, 3, 3, 1, 3,
-           3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 5, 5, 5, 5, 5, 5, 5, 1, 5, 5, 1, 1, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 1, 5, 5, 1, 5, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 1, 1, 1, 1, 5, 5, 5, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 5, 1, 1, 5, 1, 5, 5, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 1,
-           5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 5, 1, 1, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 5, 5, 1, 5, 1, 1, 5, 5, 1, 1, 1, 5, 5, 5, 1, 5, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 3, 1, 1, 3, 3, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 3, 1, 3, 1, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5,
-           3, 5, 5, 5, 5, 3, 3, 3, 5, 5, 3, 3, 5, 3, 5, 5, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 5, 4, 4, 4, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 4, 4, 5, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4,
-           4, 4, 4, 4, 5, 5, 4, 4, 4, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 4, 5, 4, 5, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 4, 5, 4, 4, 4, 4, 4, 4, 4, 4,
-           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           4, 4, 4, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-           5, 5, 5, 3, 3, 5, 5, 3, 5, 5, 3, 3, 3, 3, 3, 3, 3, 5, 5, 5, 3, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-           3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 5, 5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 4]
-    moves = [
-        (1, 3), (1, 5),
-        (2, 4),
-        (3, 1), (3, 5),
-        (4, 2), (4, 5),
-        (5, 1), (5, 3), (5, 4)
-    ]
 
-    print("=== PRE SHIFT ===")
+    ind = district.initial(k)
     pops, pop_eval = district.pop_summary(ind)
+    pop_score = district.population_score(ind)
+    pop_score_2 = district.population_score_2(ind)
+
+    print("===================")
+    print("-- INITIAL STATE --")
+    print("===================")
+    print("- Populations: -")
     print(pops)
+    print("- Population Evaluation -")
     print(pop_eval)
-    print("Compactness (Original): %s" % district.compactness(ind))
 
-    # mut = district.mutate(ind)
-    # print("Compactness (Mutated): %s" % district.compactness(mut))
-    print("=== SHIFTING ===")
-    # move = moves[0]
-    # mut = district.shift(ind, move[0], move[1], units=district.max_mutation_units)
-    mut = district.mutate(ind)
+    # src = pops.idxmax()
+    # dst = pops.idxmin()
 
-    print("=== POST SHIFT ===")
-    pops, pop_eval = district.pop_summary(mut)
-    print(pops)
-    print(pop_eval)
-    print("Compactness (Shifted): %s" % district.compactness(mut))
+    # src_per_unit = np.floor(pops/district.data.groupby(ind).size())[src]
+    # diff = pops[src] - pops[dst]
 
-    # np.savetxt("../data/ind1.")
-    # pops, pop_eval = district.pop_summary(ind)
+    # units = floor(diff/src_per_unit)
+    # units = district.pop_repair_units(ind, pops, src, dst)
+
+    # print("===================")
+    # print("-- SHIFT ATTEMPT --")
+    # print("===================")
+    # print("Source: %s; Destination: %s" % (src, dst))
+    # print("Attempting to shift: %s" % units)
+    #
+    # ind2 = district.shift(ind, src, dst, units=units)
+    # pops2, pop_eval2 = district.pop_summary(ind2)
+    #
+    # print("- Populations: -")
     # print(pops)
+    # print("- Population Evaluation")
+    # print(pop_eval)
+
+    # print("- Population Score -")
+    # print(pop_score)
+    # print("- Population Score 2 -")
+    # print(pop_score_2)
+
+    district.writeSolution(ind, "000_initial.csv")
+
+    ind = district.pop_repair(ind)
+
+    district.writeSolution(ind, "000_final.csv")
+
+    # TESTING WHY SHIFT DIDN'T WORK
+    # sol = pd.read_csv("../data/000_progress_1046.csv", names=["geoid", "assignment"])
+    # ind = sol["assignment"].values
+    # pops, pop_eval = district.pop_summary(ind)
+    #
+    # print("=== Initial Stats ===")
+    # print(pops)
+    # print(pop_eval)
     # print(district.population_score(ind))
-    # print(np.unique(ind, return_counts=True))
-    # np.savetxt("../data/evenpopinit.csv", ind, fmt="%i")
-    # adj = district.pop_repair(ind)
-    # np.savetxt("../data/evenpopadj.csv", adj, fmt="%i")
-
-    # ind1 = district.initial(k)
-    # ind2 = district.initial(k)
-    # new = district.crossover(ind1, ind2)
     #
-    # np.savetxt("../data/ind1.csv", ind1, fmt="%i")
-    # np.savetxt("../data/ind2.csv", ind2, fmt="%i")
-    # np.savetxt("../data/new.csv", new, fmt="%i")
-
-
-    # pop_target = floor(district.data["block_pop_total"].sum()/k)
-    # print(pop_target)
-
-    # min = floor((pop_total/k) * (1 - pop_threshold))
-    # max = ceil((pop_total/k) * (1 + pop_threshold))
-
-
-
-    # pops, pop_eval = district.pop_summary(individual)
-    #print(pops.sum()/k)
-    #print(pops)
-    #print(pop_eval)
-    #print((50*(1-(pops/pop_target)**(-pop_eval))).astype("int"))
-    # adjusted = district.pop_repair(individual)
-    #
-    # np.savetxt("../data/demo_solutions/adj2.csv", adjusted, fmt="%i")
-
-    # for i in range(78, 101):
-    #     print(i)
-    #     individual = district.initial(k)
-    #     adjusted = district.pop_repair(individual)
-    #     np.savetxt("../data/demo_solutions/solution_%s.csv" % i, adjusted, fmt="%i")
-
-    #print(district.pop_summary(individual))
-    #np.savetxt("../data/demo_solutions/solution_%s.csv" % i, individual, fmt="%i")
-    # print("Compactness: %s" % district.compactness(individual))
-    # print("Vote Efficiency: %s" % district.vote_efficiency_gap(individual))
-    # print("Cluster Score: %s" % district.cluster_proximity("all_cluster", individual))
+    # print("=== Shift Attempt ===")
+    # ind = district.shift(ind, 5, 1, 1, subzone=[1457])
+    # print(district.population_score(ind))
 
 
 if __name__ == "__main__":

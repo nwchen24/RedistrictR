@@ -9,8 +9,9 @@ def loadData(name):
     data = pd.read_csv("../data/"+name+"_data.csv")
     adjacency = lil_matrix(mmread("../data/"+name+"_adjacency.mtx"))
     edges = csr_matrix(mmread("../data/"+name+"_edges.mtx"))
+    qadjacency = lil_matrix(mmread("../data/"+name+"_qadjacency.mtx"))
 
-    return data, adjacency, edges
+    return data, adjacency, edges, qadjacency
 
 
 #helper function to parse comand line args
