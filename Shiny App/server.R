@@ -13,6 +13,8 @@
 
 # rsconnect::deployApp("./Documents/MIDS/redistrictr/Shiny App/")
 
+# install devtools version of ggplot2
+#devtools::install_github('hadley/ggplot2')
 
 library(sp)
 library(leaflet)
@@ -20,10 +22,12 @@ library(shiny)
 library(shinythemes)
 library(mapview)
 library(RColorBrewer)
+library(plotly)
 
 library(scales)
 library(lattice)
 library(dtplyr)
+library(dbplyr)
 library(htmltools)
 
 library(dplyr)
@@ -65,7 +69,8 @@ server <- function(input, output, session) {
   # take the solution set that is optimized for the selected optimization factor (optfactor) (100 solutions) 
   # and order by the optimization factor to get the 6 best solutions
   solution_subset = reactive({
-    return(s[s$target_id==t[t[,input$optfactor]==1,"id"],][order(s[s$target_id==t[t[,input$optfactor]==1,"id"],][,input$optfactor], decreasing=T),])
+    target = t[t[,2]== (if ("compactness" %in% input$optfactor) 1 else 0) & t[,3]== (if ("vote_efficiency" %in% input$optfactor) 1 else 0) & t[,4] == (if ("cluster_proximity" %in% input$optfactor) 1 else 0),]
+    return(s[s$target_id==target$id,][order(s[s$target_id==target$id,][,input$optfactor[1]], decreasing=T),])
   })
   
   # get the data for the county selected
@@ -82,55 +87,72 @@ server <- function(input, output, session) {
   
   map_theme = providers$CartoDB.DarkMatterNoLabels
   
-  output$compactness = renderPlot({
-    ggplot(solution_subset(), aes(round(compactness,2))) +
+  output$compactness = renderPlotly({
+    p = ggplot(solution_subset(), aes(round(compactness,2))) +
       xlab("Compactness Score") +
-      geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
+      geom_bar(fill=rgb(1,1,1, alpha=0.5)) +
       theme(panel.background = element_blank(),
-            plot.background = element_blank(),
-            panel.grid = element_blank(),
-            axis.ticks = element_blank(),
-            axis.title.x= element_text(color="white"),
-            axis.text.x = element_text(color="white"),
-            axis.title.y = element_blank(),
-            axis.text.y = element_blank())
-  },
-  bg="transparent",
-  execOnResize = TRUE
+          plot.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title.x= element_text(color="white"),
+          axis.text.x = element_text(color="white"),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank())
+    
+    p = style(p, hoverinfo="x+y")
+    
+    ggplotly(p) %>% config(displayModeBar = F) %>%
+      layout(plot_bgcolor='transparent') %>%
+      layout(paper_bgcolor='transparent')
+  
+  }
   )
   
-  output$vote_efficiency = renderPlot({
-    ggplot(solution_subset(), aes(round(vote_efficiency,2))) +
+  
+  output$vote_efficiency = renderPlotly({
+    p = ggplot(solution_subset(), aes(round(vote_efficiency,2))) +
       xlab("Vote Efficiency Score") +
       geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
       theme(panel.background = element_blank(),
             plot.background = element_blank(),
-            panel.grid = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
             axis.ticks = element_blank(),
             axis.title.x= element_text(color="white"),
             axis.text.x = element_text(color="white"),
             axis.title.y = element_blank(),
             axis.text.y = element_blank())
-  },
-  bg="transparent",
-  execOnResize = TRUE
+    
+    p = style(p, hoverinfo="x+y")
+    
+    ggplotly(p) %>% config(displayModeBar = F) %>%
+      layout(plot_bgcolor='transparent') %>%
+      layout(paper_bgcolor='transparent')
+  }
   )
   
-  output$cluster_proximity = renderPlot({
-    ggplot(solution_subset(), aes(round(cluster_proximity,2))) +
+  output$cluster_proximity = renderPlotly({
+    p = ggplot(solution_subset(), aes(round(cluster_proximity,2))) +
       xlab("Geographic Cluster Score") +
       geom_bar(fill=rgb(1,1,1, alpha=0.5)) + 
       theme(panel.background = element_blank(),
             plot.background = element_blank(),
-            panel.grid = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
             axis.ticks = element_blank(),
             axis.title.x= element_text(color="white"),
             axis.text.x = element_text(color="white"),
             axis.title.y = element_blank(),
             axis.text.y = element_blank())
-  },
-  bg="transparent",
-  execOnResize = TRUE
+    
+    p = style(p, hoverinfo="x+y")
+    
+    ggplotly(p) %>% config(displayModeBar = F) %>%
+      layout(plot_bgcolor='transparent') %>%
+      layout(paper_bgcolor='transparent')
+  }
   )
   
   
@@ -230,5 +252,6 @@ server <- function(input, output, session) {
                                                       bringToFront = TRUE),
                   label = ~htmlEscape(assignment))
   })
+
   
 }
