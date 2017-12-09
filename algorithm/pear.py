@@ -12,6 +12,8 @@ from deap import base
 from deap import creator
 from deap import tools
 
+from scoop import futures
+
 #NC add for dynamic selection of evaluation function
 from sys import argv
 import pymysql.cursors
@@ -30,6 +32,7 @@ population_size = config.getint(section, "population_size")
 generations = config.getint(section, "generations")
 
 k = config.getint(section, "num_districts")
+district.pop_min, district.pop_max = district.pop_range(k)
 
 #get the the list of geoIDs
 geoIDs_list = district.data.GEOID
@@ -85,6 +88,7 @@ district.weights_raw = weights_raw
 creator.create("FitnessMax", base.Fitness, weights=(1.0,1.0,1.0))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
+toolbox.register("map", futures.map_as_completed)
 toolbox.register("individual", district.initDistrict, creator.Individual, k)
 # toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
@@ -101,7 +105,6 @@ hall_of_fame_operative = tools.HallOfFame(maxsize = 100)
 #*********************************************************************
 #*********************************************************************
 def main():
-    district.pop_min, district.pop_max = district.pop_range(k)
 
     print("== Building initial population ==")
     pop_start_time = time()
@@ -175,7 +178,7 @@ def main():
 
     #Once the algorithm is finished running, update the hall of fame
     hall_of_fame_operative.update(pop)
-    
+
     #get the ordering of the metrics returned in the tuple resulting from the evaluation function.
     metric_score_order = district.evaluate_metric_order_helper(hall_of_fame_operative[0])
 
@@ -194,7 +197,7 @@ def main():
         #increment the solution id
         solution_id_for_insert += 1
         print(solution_id_for_insert)
-        
+
         #*************************************
         #write solution and its fitness / evaluation scores to the solutions table
         #solutions table has columns:
@@ -226,13 +229,13 @@ def main():
 
         #combine the individual assignments and the geoIDs into a dict which we will use to write to the assignments table in the DB
         individual_assignment_dict = dict(zip(geoIDs_list, individual))
-        
+
         #write assignments to the assignments table
         #assignments table has columns:
         #geoid, solution_id, assignment, id
         with connection.cursor() as cursor3:
-            
-            for blockgroup_id in individual_assignment_dict.keys():  
+
+            for blockgroup_id in individual_assignment_dict.keys():
                 sql_assignment_insert = "INSERT INTO assignments (geoid, solution_id, assignment, id) VALUES(%s, %s, %s, %s);"
                 cursor3.execute(sql_assignment_insert, (str(blockgroup_id), str(solution_id_for_insert), str(individual_assignment_dict[blockgroup_id]), None,))
 

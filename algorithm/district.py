@@ -467,7 +467,7 @@ def compactness(ind):
 # ***************************************************************************
 # Cluster Proximity Function
 # ***************************************************************************
-def cluster_proximity(cluster_var, ind):
+def cluster_proximity(ind, cluster_var='all_cluster'):
     # add assignment list as a column
     data['district_assignment'] = ind
 
