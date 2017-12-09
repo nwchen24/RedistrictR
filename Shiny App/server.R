@@ -14,7 +14,7 @@
 # rsconnect::deployApp("./Documents/MIDS/redistrictr/Shiny App/")
 
 # install devtools version of ggplot2
-#devtools::install_github('hadley/ggplot2')
+# devtools::install_github('hadley/ggplot2')
 
 library(sp)
 library(leaflet)
@@ -66,11 +66,19 @@ data$GEOID = as.numeric(data$GEOID)
 
 server <- function(input, output, session) {
   
+  # change tab to application when start button is clicked
+  observeEvent(input$start, {
+    print("clicked")
+    updateTabsetPanel(session, "redistrictR",
+                     selected = "Application")
+  })
+  
   # take the solution set that is optimized for the selected optimization factor (optfactor) (100 solutions) 
   # and order by the optimization factor to get the 6 best solutions
   solution_subset = reactive({
     target = t[t[,2]== (if ("compactness" %in% input$optfactor) 1 else 0) & t[,3]== (if ("vote_efficiency" %in% input$optfactor) 1 else 0) & t[,4] == (if ("cluster_proximity" %in% input$optfactor) 1 else 0),]
-    return(s[s$target_id==target$id,][order(s[s$target_id==target$id,][,input$optfactor[1]], decreasing=T),])
+    return(s[s$target_id==target$id,][order(s[s$target_id==target$id,][,"fitness"], decreasing=T),])
+    
   })
   
   # get the data for the county selected
