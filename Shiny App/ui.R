@@ -40,7 +40,13 @@ fluidPage(
         font-weight:300;
       }
 
-      h1,h2,h3,h4,.h1,.h2,.h3,.h4 {
+      h1,.h1 {
+        font-size: 80px;
+        font-weight: 100;
+        padding: 50px 0px 30px;
+      }
+
+      h2,h3,h4,.h2,.h3,.h4 {
         font-weight: 300;
       }
 
@@ -72,7 +78,26 @@ fluidPage(
 
   
   navbarPage(
-    "redistrictR", 
+    "redistrictR", id='redistrictR',
+    
+    tabPanel("Home",
+             
+             fluidRow(
+               column(8, offset=2, align="center",
+                      HTML('<h1><font color="#CF120F">r</font>edistrict<font color="#1467F8">R</font></h1>'),
+                      #h1('redistrictR', style='padding:50px 0px 30px'),
+                      p("RedistrictR is an interactive tool that helps you 
+                        explore and understand how voting districts can be 
+                        drawn differently given different factors of fairness. 
+                        For instance, if you optimize just for compactness, 
+                        how does that impact your map's measure of vote efficiency? 
+                        etc etc.",
+                        style={"padding:0px 0px 30px; font-size:16px"}),
+                      actionButton("start","Try it out!"),
+                      p(HTML("<font color='#7c7c7c'>MIDS December 2017<br>joe izenman, nick chen, nikki lee</font>"), style={"font-size:12px; padding: 100px 0px 0px"})
+                      )
+               )
+             ),
     
     tabPanel("Application",
              fluidRow(
