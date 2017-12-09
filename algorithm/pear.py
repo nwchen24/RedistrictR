@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from math import floor
 import csv
+from time import time
 
 from deap import base
 from deap import creator
@@ -16,16 +17,18 @@ from sys import argv
 import pymysql.cursors
 
 # Import configuration and initialize the district module
-section = "pear"
+section = "minipear"
 config = configparser.ConfigParser()
 config.read("settings.cfg")
 
-district.data, district.adjacency, district.edges = utils.loadData(config.get(section, "dataset"))
+district.data, district.adjacency, district.edges, district.qadjacency = utils.loadData(config.get(section, "dataset"))
 district.max_mutation_units = config.getint(section, "max_mutation_units")
 district.pop_threshold = config.getfloat(section, "pop_threshold")
+district.pop_min, district.pop_max = district.pop_range(k)
 
 crossover_prob, mutation_prob = config.getfloat(section, "crossover_prob"), config.getfloat(section, "mutation_prob")
 population_size = config.getint(section, "population_size")
+generations = config.getint(section, "generations")
 
 k = config.getint(section, "num_districts")
 
@@ -37,6 +40,9 @@ geoIDs_list = district.data.GEOID
 
 #create the variable that will hold the result read from the target table in the database
 weights_raw = None
+
+# TEMP: Remove this after testing
+# weights_raw = {"compactness": 1}
 
 #NC get weights from the target table in the database
 #NOTE: Not sure whether this too should be included inside of the main() function
@@ -69,8 +75,8 @@ connection.close()
 
 #set weights_raw in the district module equal to what was read in from the database
 district.weights_raw = weights_raw
-
-print(weights_raw)
+#
+# print(weights_raw)
 
 #*********************************************************************
 
@@ -82,8 +88,7 @@ creator.create("FitnessMax", base.Fitness, weights=(1.0,1.0,1.0))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 toolbox.register("individual", district.initDistrict, creator.Individual, k)
-#populations are a list of individuals
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
 toolbox.register("mutate", district.mutate)
@@ -97,6 +102,9 @@ hall_of_fame_operative = tools.HallOfFame(maxsize = 5)
 #*********************************************************************
 #*********************************************************************
 def main():
+    print("== Building initial population ==")
+    pop_start_time = time()
+    
     #create a population creating half of individuals using random initialization from above and pulling half from the database
     #get IDs of solutions we want to pull from the DB
 
@@ -174,37 +182,57 @@ def main():
     pop = pop_fromDB + pop_random
 
     fitnesses = list(map(toolbox.evaluate, pop))
+
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
     fits = [ind.fitness.values[0] for ind in pop]
-    print(fits)
+    pop_end_time = time()
+    pop_duration = pop_end_time - pop_start_time
+    print("%s solutions initialized in %s seconds (%s per solution)" % (population_size, pop_duration, floor(pop_duration/population_size)))
 
-    #adjust number of generations here
-    #adjust population size in settings.cfg
-    for g in range(1, 5):
+
+    # Evolve for the number of generations requested
+    for g in range(1, generations+1):
         print("-- Generation %i --" % g)
-        offspring = toolbox.select(pop, population_size)
-        offspring = list(map(toolbox.clone, offspring))
+        generation_start_time = time()
 
+        # Use the selection operator to limit the population down to population_size
+        # After each generation the overall population will be slightly larger, due to the crossover operation.
+        offspring = toolbox.select(pop, population_size)
+
+        # Do a deep copy of the offspring, so they do not directly edit the current population
+        offspring = list(toolbox.map(toolbox.clone, offspring))
+
+        # Crossover operation: loop over every possible pair in the population, attempting crossover
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            # Choose pairs to mate via an independent probability
             if random.random() < crossover_prob:
-                # In onemax this function modifies both in place to turn them into two new options
-                # The PEAR version only creates one new solution, not in place. just append to offspring?
+                # Run the crossover operation and append the child to the population
                 offspring.append(creator.Individual(toolbox.mate(child1, child2)))
 
+        # Mutation operation: loop over every individual in the population, attempting crossover
         for mutant in offspring:
+            # Choose which individuals mutate via an independent probability
             if random.random() < mutation_prob:
+                # Run the mutation operation, which edits the individual in place.
                 mutant = creator.Individual(toolbox.mutate(mutant))
+                # Invalidate the fitness for this individual, because it has changed
                 del mutant.fitness.values
 
+        # Get a list of all the individuals in the offspring with an invalid fitness score.
+        # These are all the new individuals, either children or mutants
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = map(toolbox.evaluate, invalid_ind)
+        # Calculate the new fitness scores for these individuals, and attach
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
+        # Replace the population with the offspring
         pop[:] = offspring
+        generation_end_time = time()
+        generation_duration = generation_end_time - generation_start_time
 
-        # Check performance stats
+        # Post generation operations, like logging and outputting stats
         fits = [ind.fitness.values[0] for ind in pop]
         length = len(pop)
         mean = sum(fits) / length
@@ -216,6 +244,7 @@ def main():
         print("  Avg %s" % mean)
         print("  Std %s" % std)
         print("  Pop Count: %s" % len(fits))
+        print("\nGeneration completed in %s seconds\n" % generation_duration)
 
     #Once the algorithm is finished running, update the hall of fame
     hall_of_fame_operative.update(pop)
@@ -305,6 +334,7 @@ def main():
 
     #close the connection
     connection.close()
+
 
 if __name__ == "__main__":
     main()
