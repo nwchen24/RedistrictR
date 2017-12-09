@@ -793,9 +793,9 @@ def evaluate_metric_order_helper(ind):
 
     return func_list
 
-def initDistrict(container, k):
+#def initDistrict(container, k):
+def initDistrict(container, k, _=None):
     return container(initial(k))
-
 
 #Alternative initDistrict function to pull solutions from the DB
 def initDistrict_fromDB(container, solution_id):

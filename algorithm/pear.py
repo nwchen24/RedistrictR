@@ -21,6 +21,8 @@ section = "minipear"
 config = configparser.ConfigParser()
 config.read("settings.cfg")
 
+k = config.getint(section, "num_districts")
+
 district.data, district.adjacency, district.edges, district.qadjacency = utils.loadData(config.get(section, "dataset"))
 district.max_mutation_units = config.getint(section, "max_mutation_units")
 district.pop_threshold = config.getfloat(section, "pop_threshold")
@@ -29,8 +31,6 @@ district.pop_min, district.pop_max = district.pop_range(k)
 crossover_prob, mutation_prob = config.getfloat(section, "crossover_prob"), config.getfloat(section, "mutation_prob")
 population_size = config.getint(section, "population_size")
 generations = config.getint(section, "generations")
-
-k = config.getint(section, "num_districts")
 
 #get the the list of geoIDs
 geoIDs_list = district.data.GEOID
@@ -95,7 +95,7 @@ toolbox.register("mutate", district.mutate)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 #initialize hall of fame
-hall_of_fame_operative = tools.HallOfFame(maxsize = 5)
+hall_of_fame_operative = tools.HallOfFame(maxsize = 1)
 
 
 
@@ -176,7 +176,7 @@ def main():
         print(str(len(new_solution_ID_list)) + " individuals used from DB")
 
     #generate the number of remaining individuals using random initialization
-    pop_random = toolbox.population(n=population_size - num_solutions_from_DB)
+    pop_random = toolbox.population(n=(population_size - num_solutions_from_DB))
 
     #merge the individuals pulled from the DB and those that were randomly initialized
     pop = pop_fromDB + pop_random
