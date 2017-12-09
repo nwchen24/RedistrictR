@@ -78,9 +78,11 @@ print(weights_raw)
 # Populate weights based on input, from the targets database content
 #creator.create("FitnessMax", base.Fitness, weights=(0.0001, 1.0, 0.0001))
 creator.create("FitnessMax", base.Fitness, weights=(1.0,1.0,1.0))
+#create a type describing individuals in the population: individuals are simple lists
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 toolbox.register("individual", district.initDistrict, creator.Individual, k)
+#populations are a list of individuals
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
@@ -88,22 +90,98 @@ toolbox.register("mutate", district.mutate)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 #initialize hall of fame
-hall_of_fame_operative = tools.HallOfFame(maxsize = 100)
+hall_of_fame_operative = tools.HallOfFame(maxsize = 5)
 
 
 
 #*********************************************************************
 #*********************************************************************
 def main():
-    pop = toolbox.population(n=population_size)
+    #create a population creating half of individuals using random initialization from above and pulling half from the database
+    #get IDs of solutions we want to pull from the DB
+
+    #*****************************************************************
+    #get the IDs of solutions that we want to pull from the DB
+    #Connect to the database
+    connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com',
+                                 user='master',
+                                 password='redistrictr',
+                                 db='data',
+                                 cursorclass=pymysql.cursors.DictCursor)
+
+    #create the variable that will hold the result
+    results = None
+
+    #pull rows from the solutions table that were optimized according to the given target ID
+    try:
+        with connection.cursor() as cursor:
+            # Read a single record
+            sql = "SELECT * FROM solutions where target_id = %s ORDER BY -fitness"
+            cursor.execute(sql, (str(myargs['-tablerow']),))
+            results = cursor.fetchall()
+
+    finally:
+        connection.close()
+        
+    #put solution IDs we want to pull in a list
+    solution_ID_list = []
+
+    for solution in results:
+        solution_ID_list.append(solution['id'])
+
+    #*****************************************************************
+    #pull half of the solutions from the DB (or if that many are not available, then pull all possible solutions from the DB)
+    num_solutions_from_DB = 0
+
+    #check length of solutions pulled from DB to check if there are enough to make up half of the population
+    #if there are not enough solutions in the DB to make up half of our population, then pull all of them from the DB
+    if len(solution_ID_list) <= population_size / 2:
+        
+        #initialize list to hold population from DB
+        pop_fromDB = []
+
+        #loop through the solution ID list to create a population of individuals pulled from the DB
+        for solution in solution_ID_list:
+            toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual, solution)
+            ind_fromDB = toolbox.individual_fromDB()
+            pop_fromDB.append(ind_fromDB)
+        
+        num_solutions_from_DB = len(solution_ID_list)
+        print("Less than half of initial districts from DB")
+        print(str(num_solutions_from_DB) + "/" + str(population_size) + " individuals used from DB")
+
+    #otherwise, keep the the first n solution IDs in the list where n is half of the population size and pull those solutions
+    else:
+        new_solution_ID_list = solution_ID_list[:round(population_size / 2)]
+        
+        #initialize list to hold population from DB
+        pop_fromDB = []
+
+        #loop through the solution ID list to create a population of individuals pulled from the DB
+        for solution in new_solution_ID_list:
+            toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual, solution)
+            ind_fromDB = toolbox.individual_fromDB()
+            pop_fromDB.append(ind_fromDB)
+            
+        num_solutions_from_DB = len(new_solution_ID_list)
+        print("Half of initial districts from DB")
+        print(str(len(new_solution_ID_list)) + " individuals used from DB")
+
+    #generate the number of remaining individuals using random initialization
+    pop_random = toolbox.population(n=population_size - num_solutions_from_DB)
+
+    #merge the individuals pulled from the DB and those that were randomly initialized
+    pop = pop_fromDB + pop_random
+
     fitnesses = list(map(toolbox.evaluate, pop))
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
     fits = [ind.fitness.values[0] for ind in pop]
     print(fits)
 
-
-    for g in range(1, 101):
+    #adjust number of generations here
+    #adjust population size in settings.cfg
+    for g in range(1, 5):
         print("-- Generation %i --" % g)
         offspring = toolbox.select(pop, population_size)
         offspring = list(map(toolbox.clone, offspring))
@@ -177,7 +255,15 @@ def main():
 
         try:
             vote_efficiency_score = individual_metric_scores_dict['vote_efficiency_gap']
+        except KeyError:
+            pass
+
+        try:    
             compactness_score = individual_metric_scores_dict['compactness']
+        except KeyError:
+            pass
+
+        try:    
             cluster_proximity_score = individual_metric_scores_dict['cluster_proximity']
         except KeyError:
             pass
@@ -186,6 +272,8 @@ def main():
         combined_fitness = individual.fitness.values[0]
 
         with connection.cursor() as cursor2:
+
+            print("inserting to solution")
 
             sql_solution_insert = "INSERT INTO solutions (fitness, vote_efficiency, compactness, cluster_proximity, target_id, id) VALUES (%s, %s, %s, %s, %s, %s);"
             cursor2.execute(sql_solution_insert, (str(combined_fitness), str(vote_efficiency_score), str(compactness_score), str(cluster_proximity_score), str(myargs['-tablerow']), solution_id_for_insert))
@@ -196,11 +284,21 @@ def main():
         #write assignments to the assignments table
         #assignments table has columns:
         #geoid, solution_id, assignment, id
+
+        #create a list of tuples to put into the assignments table
+        assignments_insert_data = []
+
+        for blockgroup_id in individual_assignment_dict.keys():
+            assignments_insert_data.append((str(blockgroup_id), str(solution_id_for_insert), str(individual_assignment_dict[blockgroup_id]), None))
+
         with connection.cursor() as cursor3:
             
-            for blockgroup_id in individual_assignment_dict.keys():  
-                sql_assignment_insert = "INSERT INTO assignments (geoid, solution_id, assignment, id) VALUES(%s, %s, %s, %s);"
-                cursor3.execute(sql_assignment_insert, (str(blockgroup_id), str(solution_id_for_insert), str(individual_assignment_dict[blockgroup_id]), None,))
+            print("inserting to assignments")
+            #for blockgroup_id in individual_assignment_dict.keys():  
+            sql_assignment_insert = "INSERT INTO assignments (geoid, solution_id, assignment, id) VALUES(%s, %s, %s, %s);"
+            #cursor3.execute(sql_assignment_insert, (str(blockgroup_id), str(solution_id_for_insert), str(individual_assignment_dict[blockgroup_id]), None,))
+            cursor3.executemany(sql_assignment_insert, assignments_insert_data)
+
 
     #commit sql commands
     connection.commit()
