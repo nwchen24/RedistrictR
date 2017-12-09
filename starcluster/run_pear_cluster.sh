@@ -26,7 +26,7 @@ fi
 echo "No cluster yet, proceeding."
 
 # Create a new cluster to the specifications
-starcluster start -c redistrictr $CLUSTERNAME
+starcluster start -c redistrictr-mini $CLUSTERNAME
 
 # Get all servers for this cluster, to populate hosts file
 starcluster listclusters $CLUSTERNAME 2>/dev/null | grep running | awk '{print $1}' > $HOSTFILE
@@ -51,7 +51,7 @@ starcluster put $CLUSTERNAME -u redistrictr ~/$HOSTFILE /home/redistrictr/hosts
 echo "Commencing algorithm"
 
 # Run algorithm remotely
-starcluster sshmaster $CLUSTERNAME -u redistrictr 'python3 -m scoop --hostfile ~/hosts redistrictr/algorithm/parallelization_testing/one_max_parallel.py'
+starcluster sshmaster $CLUSTERNAME -u redistrictr "cd ~/redistrictr/algorithm/; python3 -m scoop --hostfile ~/hosts pear.py -tablerow $TARGETID"
 
 # Once algorithm is done running, terminate cluster
 starcluster terminate $CLUSTERNAME -c
