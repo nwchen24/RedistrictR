@@ -5,6 +5,7 @@ from random import randint
 from math import pi, floor, ceil
 from random import randint
 import copy, csv
+import random
 
 #NC add for dynamic selection of evaluation function
 import pymysql.cursors
@@ -412,26 +413,36 @@ def shift(ind, src, dst, units=max_mutation_units, subzone=[]):
 
     return ind
 
+def mutate(ind, individual_func = None, mutation_threshold = .95):
+    
+    #mutate according to indepedent probability
+    if random.random() < mutation_threshold:
 
-def mutate(ind):
-    k = np.unique(ind).shape[0]
-    zones = [i for i in range(1, k+1)]
-    np.random.shuffle(zones)
-    # print(zones)
+        k = np.unique(ind).shape[0]
+        zones = [i for i in range(1, k+1)]
+        np.random.shuffle(zones)
+        # print(zones)
 
-    for src in zones:
-        pops, pop_eval = pop_summary(ind)
-        # print_debug(pops, pop_eval)
-        if pops[src] > pop_min:
-            zadj = zone_adjacency(ind)
-            dst = np.random.choice(zadj[src], 1)[0]
-            print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
-            ind = shift(ind, src, dst, units=max_mutation_units)
-        # else:
-        #     print_debug("[MUTATE] Skipped shift from %s because of pop_min check." % src)
+        for src in zones:
+            pops, pop_eval = pop_summary(ind)
+            if pops[src] > pop_min:
+                zadj = zone_adjacency(ind)
+                dst = np.random.choice(zadj[src], 1)[0]
+                print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
+                ind = shift(ind, src, dst, units=max_mutation_units)
+        
+        ind = individual_func(pop_filter(list(ind)))
+        del ind.fitness.values
 
-    return pop_filter(list(ind))
+        return ind
 
+    else:
+        return ind
+
+#wrapper function for mapping mutate to different nodes
+def mutateMap(container, func, population, mapfunc=map):
+
+    return container(mapfunc(func, population))
 
 def crossover(ind1, ind2):
     k = np.unique(ind1).shape[0]

@@ -95,7 +95,11 @@ toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Indi
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
-toolbox.register("mutate", district.mutate)
+#toolbox.register("mutate", district.mutate)
+toolbox.register("mutate",district.mutate, individual_func = creator.Individual, mutation_threshold = mutation_prob)
+#map for mutation
+toolbox.register("mutateMap_tool", district.mutateMap, list, toolbox.mutate, mapfunc = toolbox.map)
+
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 #initialize hall of fame
@@ -210,14 +214,42 @@ def main():
                 # Run the crossover operation and append the child to the population
                 offspring.append(creator.Individual(toolbox.mate(child1, child2)))
 
-        # Mutation operation: loop over every individual in the population, attempting crossover
-        for mutant in offspring:
-            # Choose which individuals mutate via an independent probability
-            if random.random() < mutation_prob:
-                # Run the mutation operation, which edits the individual in place.
-                mutant = creator.Individual(toolbox.mutate(mutant))
-                # Invalidate the fitness for this individual, because it has changed
-                del mutant.fitness.values
+
+
+
+
+
+
+
+
+
+
+
+
+#        # Mutation operation: loop over every individual in the population and probabilstically induce mutation
+#        for mutant in offspring:
+#            # Choose which individuals mutate via an independent probability
+#            if random.random() < mutation_prob:
+#                # Run the mutation operation, which edits the individual in place.
+#                mutant = creator.Individual(toolbox.mutate(mutant))
+#                # Invalidate the fitness for this individual, because it has changed
+#                del mutant.fitness.values
+
+
+
+        #use map to do mutation instead of for loop
+        offspring = toolbox.mutateMap_tool(population = offspring)
+
+
+
+
+
+
+
+
+
+
+
 
         # Get a list of all the individuals in the offspring with an invalid fitness score.
         # These are all the new individuals, either children or mutants
