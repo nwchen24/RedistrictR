@@ -94,10 +94,13 @@ toolbox.register("individual", district.initDistrict, creator.Individual, k)
 toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual)
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
-toolbox.register("mate", district.crossover)
-#toolbox.register("mutate", district.mutate)
-toolbox.register("mutate",district.mutate, individual_func = creator.Individual, mutation_threshold = mutation_prob)
-#map for mutation
+
+#crossover
+toolbox.register("mate", district.crossover_testing, individual_func = creator.Individual, crossoverThreshold = crossover_prob)
+toolbox.register("mateMap_tool", district.crossoverMap, list, toolbox.mate, mapfunc = toolbox.map)
+
+#mutation
+toolbox.register("mutate", district.mutate, individual_func = creator.Individual, mutation_threshold = mutation_prob)
 toolbox.register("mutateMap_tool", district.mutateMap, list, toolbox.mutate, mapfunc = toolbox.map)
 
 toolbox.register("select", tools.selTournament, tournsize=3)
@@ -207,12 +210,76 @@ def main():
         # Do a deep copy of the offspring, so they do not directly edit the current population
         offspring = list(toolbox.map(toolbox.clone, offspring))
 
-        # Crossover operation: loop over every possible pair in the population, attempting crossover
-        for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            # Choose pairs to mate via an independent probability
-            if random.random() < crossover_prob:
-                # Run the crossover operation and append the child to the population
-                offspring.append(creator.Individual(toolbox.mate(child1, child2)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#        # Crossover operation: loop over every possible pair in the population, attempting crossover
+#        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+#            # Choose pairs to mate via an independent probability
+#            if random.random() < crossover_prob:
+#                # Run the crossover operation and append the child to the population
+#                offspring.append(creator.Individual(toolbox.mate(child1, child2)))
+
+
+
+
+        #use map to do crossover instead of for loop
+        offspring = toolbox.mateMap_tool(population = zip(offspring[::2], offspring[1::2]))
+
+       
+        print("Population size after crossover: " + str(len(offspring)))
+        #print(str(type(crossover_offspring[0])))
+
+        #print("Offspring type: ")
+        #print(str(type(offspring)) + " | " + str(len(offspring)))
+        #print(str(type(offspring[0])))
+
+        #append crossover offspring to the population
+        #offspring.append(crossover_offspring)
+
+        #try:
+        #    offspring = offspring + crossover_offspring
+        #    print("Crossover offspring appended")
+        #except AttributeError:
+        #    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         #use map to do mutation instead of for loop
         offspring = toolbox.mutateMap_tool(population = offspring)
