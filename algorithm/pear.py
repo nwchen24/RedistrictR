@@ -214,42 +214,8 @@ def main():
                 # Run the crossover operation and append the child to the population
                 offspring.append(creator.Individual(toolbox.mate(child1, child2)))
 
-
-
-
-
-
-
-
-
-
-
-
-
-#        # Mutation operation: loop over every individual in the population and probabilstically induce mutation
-#        for mutant in offspring:
-#            # Choose which individuals mutate via an independent probability
-#            if random.random() < mutation_prob:
-#                # Run the mutation operation, which edits the individual in place.
-#                mutant = creator.Individual(toolbox.mutate(mutant))
-#                # Invalidate the fitness for this individual, because it has changed
-#                del mutant.fitness.values
-
-
-
         #use map to do mutation instead of for loop
         offspring = toolbox.mutateMap_tool(population = offspring)
-
-
-
-
-
-
-
-
-
-
-
 
         # Get a list of all the individuals in the offspring with an invalid fitness score.
         # These are all the new individuals, either children or mutants

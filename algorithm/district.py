@@ -431,7 +431,9 @@ def mutate(ind, individual_func = None, mutation_threshold = .95):
                 print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
                 ind = shift(ind, src, dst, units=max_mutation_units)
         
-        ind = individual_func(pop_filter(list(ind)))
+        #ind = individual_func(pop_filter(list(ind)))
+        #ind = pop_filter(ind)
+        #pop_filter is, for some reason just returning a list, not our custom class that also has a fitness attribute - JOE to investigate
         del ind.fitness.values
 
         return ind
