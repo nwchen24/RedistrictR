@@ -22,6 +22,7 @@ config = configparser.ConfigParser()
 config.read("settings.cfg")
 
 k = config.getint(section, "num_districts")
+HOF_size = config.getint(section, "hall_of_fame_size")
 
 district.data, district.adjacency, district.edges, district.qadjacency = utils.loadData(config.get(section, "dataset"))
 district.max_mutation_units = config.getint(section, "max_mutation_units")
@@ -98,9 +99,7 @@ toolbox.register("mutate", district.mutate)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 #initialize hall of fame
-hall_of_fame_operative = tools.HallOfFame(maxsize = 1)
-
-
+hall_of_fame_operative = tools.HallOfFame(maxsize = HOF_size)
 
 #*********************************************************************
 #*********************************************************************
