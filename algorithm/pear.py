@@ -88,6 +88,7 @@ creator.create("FitnessMax", base.Fitness, weights=(1.0,1.0,1.0))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
 toolbox.register("individual", district.initDistrict, creator.Individual, k)
+toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual)
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
@@ -167,8 +168,7 @@ def main():
 
         #loop through the solution ID list to create a population of individuals pulled from the DB
         for solution in new_solution_ID_list:
-            toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual, solution)
-            ind_fromDB = toolbox.individual_fromDB()
+            ind_fromDB = toolbox.individual_fromDB(solution)
             pop_fromDB.append(ind_fromDB)
             
         num_solutions_from_DB = len(new_solution_ID_list)
