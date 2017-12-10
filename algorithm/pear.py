@@ -41,12 +41,7 @@ geoIDs_list = district.data.GEOID
 #create the variable that will hold the result read from the target table in the database
 weights_raw = None
 
-# TEMP: Remove this after testing
-# weights_raw = {"compactness": 1}
-
-#NC get weights from the target table in the database
-#NOTE: Not sure whether this too should be included inside of the main() function
-#If we want to include this section inside of the main() function, need to figure out how to set global variable district.weights_raw inside of the main() function
+#get weights from the target table in the database
 
 #read in the commmand line arguments into a dict called myargs
 myargs = utils.getopts(argv)
@@ -59,7 +54,6 @@ connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazon
     cursorclass=pymysql.cursors.DictCursor)
 
 #Get the weights corresponding to the target table row from the command line
-#try:
 with connection.cursor() as cursor:
     # Read a single record
     sql = "SELECT * FROM `targets` WHERE `id`=%s"
@@ -75,15 +69,23 @@ connection.close()
 
 #set weights_raw in the district module equal to what was read in from the database
 district.weights_raw = weights_raw
-#
-# print(weights_raw)
+
+#list of the flag values
+flags_list = [weights_raw['compactness'], weights_raw['vote_efficiency'], weights_raw['cluster_proximity']]
+
+#number of non-zero metrics in the relevant row of the target table
+num_metrics = sum(flags_list)
+
+#create a tuple of this length to feed to the FitnessMax class
+weights_tuple = tuple([1.0] * int(num_metrics))
+
+#print(weights_raw)
 
 #*********************************************************************
 
 # DEAP setup
-# Populate weights based on input, from the targets database content
-#creator.create("FitnessMax", base.Fitness, weights=(0.0001, 1.0, 0.0001))
-creator.create("FitnessMax", base.Fitness, weights=(1.0,1.0,1.0))
+#Populate weights based on input, from the targets database content
+creator.create("FitnessMax", base.Fitness, weights=weights_tuple)
 #create a type describing individuals in the population: individuals are simple lists
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
@@ -106,10 +108,9 @@ def main():
     print("== Building initial population ==")
     pop_start_time = time()
     
-    #create a population creating half of individuals using random initialization from above and pulling half from the database
-    #get IDs of solutions we want to pull from the DB
-
     #*****************************************************************
+    #create a population creating half of individuals using random initialization from above and pulling half from the database
+
     #get the IDs of solutions that we want to pull from the DB
     #Connect to the database
     connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com',
