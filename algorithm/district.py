@@ -199,7 +199,7 @@ def contiguity_check(ind, subzone, src):
     return c > 0 and c == len(neighbors)
 
 
-def initial(k):
+def initial(k, container=list, _=None):
     """Create an initial, semi-random, feasible solution, seeded with units from the outer edge.
 
     :param k:
@@ -253,10 +253,10 @@ def initial(k):
                 # Add to the zone population
                 zone_pops[sol[u]] += data.iloc[v]["block_pop_total"]
 
-    ind = list(sol)
+    ind = pop_filter(sol)
     # print(ind)
     # print(population_score(ind))
-    return(pop_filter(ind))
+    return container(ind)
 
 #Alternative initial function that instead of generating random solutions, pulls solutions from the DB
 def initial_fromDB(solution_id):
@@ -413,7 +413,7 @@ def shift(ind, src, dst, units=max_mutation_units, subzone=[]):
 
     return ind
 
-def mutate(ind, individual_func = None, mutation_threshold = .95):
+def mutate(ind, container=list, mutation_threshold = .95):
     
     #mutate according to indepedent probability
     if random.random() < mutation_threshold:
@@ -436,10 +436,7 @@ def mutate(ind, individual_func = None, mutation_threshold = .95):
         #pop_filter is, for some reason just returning a list, not our custom class that also has a fitness attribute - JOE to investigate
         del ind.fitness.values
 
-        return ind
-
-    else:
-        return ind
+    return container(ind)
 
 #wrapper function for mapping mutate to different nodes
 def mutateMap(container, func, population, mapfunc=map):

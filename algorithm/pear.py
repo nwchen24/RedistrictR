@@ -90,13 +90,13 @@ creator.create("FitnessMax", base.Fitness, weights=weights_tuple)
 #create a type describing individuals in the population: individuals are simple lists
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
-toolbox.register("individual", district.initDistrict, creator.Individual, k)
+toolbox.register("individual", district.initial, k, container=creator.Individual)
 toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual)
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
 toolbox.register("mate", district.crossover)
 #toolbox.register("mutate", district.mutate)
-toolbox.register("mutate",district.mutate, individual_func = creator.Individual, mutation_threshold = mutation_prob)
+toolbox.register("mutate", district.mutate, container = creator.Individual, mutation_threshold = mutation_prob)
 #map for mutation
 toolbox.register("mutateMap_tool", district.mutateMap, list, toolbox.mutate, mapfunc = toolbox.map)
 
