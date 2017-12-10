@@ -257,6 +257,49 @@ def initial(k):
     # print(population_score(ind))
     return(pop_filter(ind))
 
+#Alternative initial function that instead of generating random solutions, pulls solutions from the DB
+def initial_fromDB(solution_id):
+    # Connect to the database
+    connection = pymysql.connect(host='redistrictr.cdm5j7ydnstx.us-east-1.rds.amazonaws.com',
+                                 user='master',
+                                 password='redistrictr',
+                                 db='data',
+                                 cursorclass=pymysql.cursors.DictCursor)
+
+    #create the variable that will hold the results pulled from the DB
+    results = None
+
+    #pull all the assignments from the assignments table
+    try:
+        with connection.cursor() as cursor:
+            # Read a single record
+            sql = "SELECT * FROM `assignments` where solution_id = %s"
+            cursor.execute(sql, (solution_id))
+            results = cursor.fetchall()
+
+    finally:
+        connection.close()
+        
+    #initialize assignments_dict
+    assignments_dict = {}
+
+    #Put these in one long dict of type {geoid:assignment}
+    for bg_assignment in results:
+        assignments_dict[bg_assignment['geoid']] = bg_assignment['assignment']
+
+    #order this dict to be in the order of the blockgroups in SD_data.csv
+    SD_Data_blockgroup_order = list(data["GEOID"])
+
+    #intialize list to hold assignments
+    assignments_list_ordered = []
+
+    #put blockgroup assignments into list pulling from the dict pulled from the DB, but using the SD Data blockgroup order
+    for blockgroup in SD_Data_blockgroup_order:
+        assignments_list_ordered.append(assignments_dict[str(blockgroup)])
+
+    #assignments_list_ordered is the list we want to return in initial_fromDB
+    return(assignments_list_ordered)
+
 def solutionFromSplits(k, splits):
     n = len(splits)
 
@@ -728,7 +771,10 @@ def evaluate(ind):
     #then that evaluation metric will be included in the evaluation function fed to the algorithm
     for i in weights_raw.keys():
         if (weights_raw[i] == 1) & (i != "id"):
-            func_list.append(dispatcher[i](ind))
+            if i == "cluster_proximity":
+                func_list.append(dispatcher[i]('all_cluster', ind))
+            else:
+                func_list.append(dispatcher[i](ind))
 
     return tuple(func_list)
 
@@ -747,12 +793,16 @@ def evaluate_metric_order_helper(ind):
 
     return func_list
 
+#def initDistrict(container, k):
 def initDistrict(container, k, _=None):
     return container(initial(k))
 
+#Alternative initDistrict function to pull solutions from the DB
+def initDistrict_fromDB(container, solution_id):
+    return container(initial_fromDB(solution_id))
+
 def initMap(container, func, n, mapfunc=map):
     return container(mapfunc(func, range(n)))
-
 
 def writeSolution(ind, filename="assignments.csv"):
     geoids = data["GEOID"].values
