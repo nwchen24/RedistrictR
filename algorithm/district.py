@@ -421,9 +421,11 @@ def mutate(ind, container=list, mutation_threshold = .95):
         k = np.unique(ind).shape[0]
         zones = [i for i in range(1, k+1)]
         np.random.shuffle(zones)
-        # print(zones)
 
         for src in zones:
+            #print(ind)
+
+            #this is throwing an error that has to do with the groupby in the pop_summary step
             pops, pop_eval = pop_summary(ind)
             if pops[src] > pop_min:
                 zadj = zone_adjacency(ind)
@@ -431,7 +433,7 @@ def mutate(ind, container=list, mutation_threshold = .95):
                 print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
                 ind = shift(ind, src, dst, units=max_mutation_units)
         
-        #ind = individual_func(pop_filter(list(ind)))
+        ind = container(pop_filter(ind))
         #ind = pop_filter(ind)
         #pop_filter is, for some reason just returning a list, not our custom class that also has a fitness attribute - JOE to investigate
         del ind.fitness.values
@@ -440,52 +442,66 @@ def mutate(ind, container=list, mutation_threshold = .95):
 
 #wrapper function for mapping mutate to different nodes
 def mutateMap(container, func, population, mapfunc=map):
-
     return container(mapfunc(func, population))
 
-def crossover(ind1, ind2):
-    k = np.unique(ind1).shape[0]
-    labels = []
-    splits = defaultdict(lambda: set())
+def crossover(pair, container = None, crossoverThreshold = .05):
 
-    # Loop over all indices in the solutions to produce initial splits
-    for i in range(0, len(ind1)):
-        # Any units that whose ind1 and ind2 assignments both match get placed into a split
-        splits[(ind1[i], ind2[i])] |= set([i])
+    #Take the zipped population and get individuals in each potential pair
+    pair_list = list(pair)
+    ind1 = pair_list[0]
+    ind2 = pair_list[1]
 
-    newSplits = []
+    #crossover according to independent probability
+    if random.random() < crossoverThreshold:
 
-    # Loop over all splits to handle cases where a single split has gotten noncontiguous elements
-    for key, s in splits.items():
-        # Construct an adjacency graph dict of just the items in this split
-        G = {}
-        for u in s:
-            G[u] = []
-            for v in adjacency.rows[u]:
-                if v in s:
-                    G[u].append(v)
+        k = np.unique(ind1).shape[0]
+        labels = []
+        splits = defaultdict(lambda: set())
 
-        # while there are still units in s...
-        while len(s) > 0:
-            # Pop the first item from s, and construct a bfs spanning tree from it
-            origin = s.pop()
-            span = bfs(G, origin)
-            newSplits.append(span)
+        # Loop over all indices in the solutions to produce initial splits
+        for i in range(0, len(ind1)):
+            # Any units that whose ind1 and ind2 assignments both match get placed into a split
+            splits[(ind1[i], ind2[i])] |= set([i])
 
-            # Remove these units from s
-            s = s - set(span)
+        newSplits = []
 
-            # Remove these units from the graph
-            ng = {}
-            for i, v in G.items():
-                if i not in span:
-                    ng[i] = list(set(G[i]) - set(span))
-            G = copy.deepcopy(ng)
+        # Loop over all splits to handle cases where a single split has gotten noncontiguous elements
+        for key, s in splits.items():
+            # Construct an adjacency graph dict of just the items in this split
+            G = {}
+            for u in s:
+                G[u] = []
+                for v in adjacency.rows[u]:
+                    if v in s:
+                        G[u].append(v)
 
-    #print(newSplits)
-    ind = solutionFromSplits(k, newSplits)
-    return pop_filter(ind)
+            # while there are still units in s...
+            while len(s) > 0:
+                # Pop the first item from s, and construct a bfs spanning tree from it
+                origin = s.pop()
+                span = bfs(G, origin)
+                newSplits.append(span)
 
+                # Remove these units from s
+                s = s - set(span)
+
+                # Remove these units from the graph
+                ng = {}
+                for i, v in G.items():
+                    if i not in span:
+                        ng[i] = list(set(G[i]) - set(span))
+                G = copy.deepcopy(ng)
+
+        #print(newSplits)
+        ind = solutionFromSplits(k, newSplits)
+        return container(pop_filter(ind))
+
+    else:
+        pass
+
+#wrapper function for mapping mutate to different nodes
+def crossoverMap(container, func, population, mapfunc=map):
+    return container(mapfunc(func, population))
 
 #################################################################################################
 # SCORES
@@ -803,9 +819,6 @@ def evaluate_metric_order_helper(ind):
 
     return func_list
 
-#def initDistrict(container, k):
-def initDistrict(container, k, _=None):
-    return container(initial(k))
 
 #Alternative initDistrict function to pull solutions from the DB
 def initDistrict_fromDB(container, solution_id):

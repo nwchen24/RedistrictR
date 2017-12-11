@@ -90,14 +90,17 @@ creator.create("FitnessMax", base.Fitness, weights=weights_tuple)
 #create a type describing individuals in the population: individuals are simple lists
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
-toolbox.register("individual", district.initial, k, container=creator.Individual)
+toolbox.register("individual", district.initial, k, creator.Individual)
 toolbox.register("individual_fromDB", district.initDistrict_fromDB, creator.Individual)
 toolbox.register("population", district.initMap, list, toolbox.individual, mapfunc=toolbox.map)
 toolbox.register("evaluate", district.evaluate)
-toolbox.register("mate", district.crossover)
-#toolbox.register("mutate", district.mutate)
+
+#crossover
+toolbox.register("mate", district.crossover, container = creator.Individual, crossoverThreshold = crossover_prob)
+toolbox.register("mateMap_tool", district.crossoverMap, list, toolbox.mate, mapfunc = toolbox.map)
+
+#mutation
 toolbox.register("mutate", district.mutate, container = creator.Individual, mutation_threshold = mutation_prob)
-#map for mutation
 toolbox.register("mutateMap_tool", district.mutateMap, list, toolbox.mutate, mapfunc = toolbox.map)
 
 toolbox.register("select", tools.selTournament, tournsize=3)
@@ -207,12 +210,14 @@ def main():
         # Do a deep copy of the offspring, so they do not directly edit the current population
         offspring = list(toolbox.map(toolbox.clone, offspring))
 
-        # Crossover operation: loop over every possible pair in the population, attempting crossover
-        for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            # Choose pairs to mate via an independent probability
-            if random.random() < crossover_prob:
-                # Run the crossover operation and append the child to the population
-                offspring.append(creator.Individual(toolbox.mate(child1, child2)))
+        #use map to do crossover instead of for loop
+        crossover_offspring = toolbox.mateMap_tool(population = zip(offspring[::2], offspring[1::2]))
+
+        #remove blank solutions from the result of the crossover
+        crossover_offspring = [i for i in crossover_offspring if i is not None]
+
+        #incororate crossover results into the population
+        offspring = offspring + crossover_offspring
 
         #use map to do mutation instead of for loop
         offspring = toolbox.mutateMap_tool(population = offspring)
