@@ -40,7 +40,7 @@ def produceSolutions():
             solution_id = t * num_solutions + s + 1
             ind = district.initial(k)
             comp = district.compactness(ind)
-            clust = district.cluster_proximity("all_cluster", ind)
+            clust = district.cluster_proximity(ind, "all_cluster")
             vote = district.vote_efficiency_gap(ind)
             # print(solution_id,target_id,comp,clust,vote)
 
@@ -64,17 +64,21 @@ def main():
     district.pop_min, district.pop_max = district.pop_range(k)
 
     ind = district.initial(k)
-    pops, pop_eval = district.pop_summary(ind)
-    pop_score = district.population_score(ind)
-    pop_score_2 = district.population_score_2(ind)
 
-    print("===================")
-    print("-- INITIAL STATE --")
-    print("===================")
-    print("- Populations: -")
-    print(pops)
-    print("- Population Evaluation -")
-    print(pop_eval)
+    map()
+    futures.map()
+    toolbox.map()
+    # pops, pop_eval = district.pop_summary(ind)
+    # pop_score = district.population_score(ind)
+    # pop_score_2 = district.population_score_2(ind)
+    #
+    # print("===================")
+    # print("-- INITIAL STATE --")
+    # print("===================")
+    # print("- Populations: -")
+    # print(pops)
+    # print("- Population Evaluation -")
+    # print(pop_eval)
 
     # src = pops.idxmax()
     # dst = pops.idxmin()
@@ -103,12 +107,12 @@ def main():
     # print(pop_score)
     # print("- Population Score 2 -")
     # print(pop_score_2)
-
-    district.writeSolution(ind, "000_initial.csv")
-
-    ind = district.pop_repair(ind)
-
-    district.writeSolution(ind, "000_final.csv")
+    #
+    # district.writeSolution(ind, "000_initial.csv")
+    #
+    # ind = district.pop_repair(ind)
+    #
+    # district.writeSolution(ind, "000_final.csv")
 
     # TESTING WHY SHIFT DIDN'T WORK
     # sol = pd.read_csv("../data/000_progress_1046.csv", names=["geoid", "assignment"])
