@@ -292,17 +292,17 @@ def main():
         try:
             vote_efficiency_score = individual_metric_scores_dict['vote_efficiency_gap']
         except KeyError:
-            pass
+            vote_efficiency_score = district.vote_efficiency_gap(individual)
 
         try:    
             compactness_score = individual_metric_scores_dict['compactness']
         except KeyError:
-            pass
+            compactness_score = district.compactness(individual)
 
         try:    
             cluster_proximity_score = individual_metric_scores_dict['cluster_proximity']
         except KeyError:
-            pass
+            cluster_proximity_score = district.cluster_proximity(individual)
 
         #get weighted average fitness score used by the algorithm
         combined_fitness = individual.fitness.values[0]
