@@ -5,6 +5,7 @@ from random import randint
 from math import pi, floor, ceil
 from random import randint
 import copy, csv
+import random
 
 #NC add for dynamic selection of evaluation function
 import pymysql.cursors
@@ -198,7 +199,7 @@ def contiguity_check(ind, subzone, src):
     return c > 0 and c == len(neighbors)
 
 
-def initial(k):
+def initial(k, container=list, _=None):
     """Create an initial, semi-random, feasible solution, seeded with units from the outer edge.
 
     :param k:
@@ -252,10 +253,10 @@ def initial(k):
                 # Add to the zone population
                 zone_pops[sol[u]] += data.iloc[v]["block_pop_total"]
 
-    ind = list(sol)
+    ind = pop_filter(sol)
     # print(ind)
     # print(population_score(ind))
-    return(pop_filter(ind))
+    return container(ind)
 
 #Alternative initial function that instead of generating random solutions, pulls solutions from the DB
 def initial_fromDB(solution_id):
@@ -412,70 +413,95 @@ def shift(ind, src, dst, units=max_mutation_units, subzone=[]):
 
     return ind
 
+def mutate(ind, container=list, mutation_threshold = .95):
+    
+    #mutate according to indepedent probability
+    if random.random() < mutation_threshold:
 
-def mutate(ind):
-    k = np.unique(ind).shape[0]
-    zones = [i for i in range(1, k+1)]
-    np.random.shuffle(zones)
-    # print(zones)
+        k = np.unique(ind).shape[0]
+        zones = [i for i in range(1, k+1)]
+        np.random.shuffle(zones)
 
-    for src in zones:
-        pops, pop_eval = pop_summary(ind)
-        # print_debug(pops, pop_eval)
-        if pops[src] > pop_min:
-            zadj = zone_adjacency(ind)
-            dst = np.random.choice(zadj[src], 1)[0]
-            print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
-            ind = shift(ind, src, dst, units=max_mutation_units)
-        # else:
-        #     print_debug("[MUTATE] Skipped shift from %s because of pop_min check." % src)
+        for src in zones:
+            #print(ind)
 
-    return pop_filter(list(ind))
+            #this is throwing an error that has to do with the groupby in the pop_summary step
+            pops, pop_eval = pop_summary(ind)
+            if pops[src] > pop_min:
+                zadj = zone_adjacency(ind)
+                dst = np.random.choice(zadj[src], 1)[0]
+                print_debug("[MUTATE] Running shift from %s to %s." % (src, dst))
+                ind = shift(ind, src, dst, units=max_mutation_units)
+        
+        ind = container(pop_filter(ind))
+        #ind = pop_filter(ind)
+        #pop_filter is, for some reason just returning a list, not our custom class that also has a fitness attribute - JOE to investigate
+        del ind.fitness.values
 
+    return container(ind)
 
-def crossover(ind1, ind2):
-    k = np.unique(ind1).shape[0]
-    labels = []
-    splits = defaultdict(lambda: set())
+#wrapper function for mapping mutate to different nodes
+def mutateMap(container, func, population, mapfunc=map):
+    return container(mapfunc(func, population))
 
-    # Loop over all indices in the solutions to produce initial splits
-    for i in range(0, len(ind1)):
-        # Any units that whose ind1 and ind2 assignments both match get placed into a split
-        splits[(ind1[i], ind2[i])] |= set([i])
+def crossover(pair, container = None, crossoverThreshold = .05):
 
-    newSplits = []
+    #Take the zipped population and get individuals in each potential pair
+    pair_list = list(pair)
+    ind1 = pair_list[0]
+    ind2 = pair_list[1]
 
-    # Loop over all splits to handle cases where a single split has gotten noncontiguous elements
-    for key, s in splits.items():
-        # Construct an adjacency graph dict of just the items in this split
-        G = {}
-        for u in s:
-            G[u] = []
-            for v in adjacency.rows[u]:
-                if v in s:
-                    G[u].append(v)
+    #crossover according to independent probability
+    if random.random() < crossoverThreshold:
 
-        # while there are still units in s...
-        while len(s) > 0:
-            # Pop the first item from s, and construct a bfs spanning tree from it
-            origin = s.pop()
-            span = bfs(G, origin)
-            newSplits.append(span)
+        k = np.unique(ind1).shape[0]
+        labels = []
+        splits = defaultdict(lambda: set())
 
-            # Remove these units from s
-            s = s - set(span)
+        # Loop over all indices in the solutions to produce initial splits
+        for i in range(0, len(ind1)):
+            # Any units that whose ind1 and ind2 assignments both match get placed into a split
+            splits[(ind1[i], ind2[i])] |= set([i])
 
-            # Remove these units from the graph
-            ng = {}
-            for i, v in G.items():
-                if i not in span:
-                    ng[i] = list(set(G[i]) - set(span))
-            G = copy.deepcopy(ng)
+        newSplits = []
 
-    #print(newSplits)
-    ind = solutionFromSplits(k, newSplits)
-    return pop_filter(ind)
+        # Loop over all splits to handle cases where a single split has gotten noncontiguous elements
+        for key, s in splits.items():
+            # Construct an adjacency graph dict of just the items in this split
+            G = {}
+            for u in s:
+                G[u] = []
+                for v in adjacency.rows[u]:
+                    if v in s:
+                        G[u].append(v)
 
+            # while there are still units in s...
+            while len(s) > 0:
+                # Pop the first item from s, and construct a bfs spanning tree from it
+                origin = s.pop()
+                span = bfs(G, origin)
+                newSplits.append(span)
+
+                # Remove these units from s
+                s = s - set(span)
+
+                # Remove these units from the graph
+                ng = {}
+                for i, v in G.items():
+                    if i not in span:
+                        ng[i] = list(set(G[i]) - set(span))
+                G = copy.deepcopy(ng)
+
+        #print(newSplits)
+        ind = solutionFromSplits(k, newSplits)
+        return container(pop_filter(ind))
+
+    else:
+        pass
+
+#wrapper function for mapping mutate to different nodes
+def crossoverMap(container, func, population, mapfunc=map):
+    return container(mapfunc(func, population))
 
 #################################################################################################
 # SCORES
@@ -793,9 +819,6 @@ def evaluate_metric_order_helper(ind):
 
     return func_list
 
-#def initDistrict(container, k):
-def initDistrict(container, k, _=None):
-    return container(initial(k))
 
 #Alternative initDistrict function to pull solutions from the DB
 def initDistrict_fromDB(container, solution_id):
