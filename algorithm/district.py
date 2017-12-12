@@ -798,7 +798,7 @@ def evaluate(ind):
     for i in weights_raw.keys():
         if (weights_raw[i] == 1) & (i != "id"):
             if i == "cluster_proximity":
-                func_list.append(dispatcher[i]('all_cluster', ind))
+                func_list.append(dispatcher[i](ind, 'all_cluster'))
             else:
                 func_list.append(dispatcher[i](ind))
 

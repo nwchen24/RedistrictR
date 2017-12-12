@@ -65,9 +65,9 @@ with connection.cursor() as cursor:
     weights_raw = cursor.fetchone()
 
     #get the max id in the solutions table
-    sql2 = "SELECT MAX(solution_id) FROM assignments"
-    cursor.execute(sql2, ())
-    starting_solution_id = cursor.fetchone()['MAX(solution_id)']
+    # sql2 = "SELECT MAX(solution_id) FROM assignments"
+    # cursor.execute(sql2, ())
+    # starting_solution_id = cursor.fetchone()['MAX(solution_id)']
 
 connection.close()
 
@@ -267,13 +267,14 @@ def main():
                              cursorclass=pymysql.cursors.DictCursor)
 
     #set the start of the solution table ID
-    solution_id_for_insert = starting_solution_id
+    # solution_id_for_insert = starting_solution_id
+    solution_id_for_insert = None
 
     for individual in hall_of_fame_operative:
 
         #increment the solution id
-        solution_id_for_insert += 1
-        print(solution_id_for_insert)
+        # solution_id_for_insert += 1
+        # print(solution_id_for_insert)
 
         #*************************************
         #write solution and its fitness / evaluation scores to the solutions table
@@ -311,8 +312,11 @@ def main():
 
             print("inserting to solution")
 
-            sql_solution_insert = "INSERT INTO solutions (fitness, vote_efficiency, compactness, cluster_proximity, target_id, id) VALUES (%s, %s, %s, %s, %s, %s);"
-            cursor2.execute(sql_solution_insert, (str(combined_fitness), str(vote_efficiency_score), str(compactness_score), str(cluster_proximity_score), str(myargs['-tablerow']), solution_id_for_insert))
+            sql_solution_insert = "INSERT INTO solutions (fitness, vote_efficiency, compactness, cluster_proximity, target_id, id) VALUES (%s, %s, %s, %s, %s, NULL);"
+            cursor2.execute(sql_solution_insert, (str(combined_fitness), str(vote_efficiency_score), str(compactness_score), str(cluster_proximity_score), str(myargs['-tablerow'])))
+            solution_id_for_insert = cursor2.lastrowid
+
+        print(solution_id_for_insert)
 
         #combine the individual assignments and the geoIDs into a dict which we will use to write to the assignments table in the DB
         individual_assignment_dict = dict(zip(geoIDs_list, individual))
