@@ -143,6 +143,13 @@ fluidPage(
 
                  column(width=8,
                         h3("Most Optimal District Maps"),
+                        
+                        conditionalPanel(condition = "output.map1_button",
+                                         fluidRow(
+                                           p('hello')
+                                           )
+                                         ),
+                        
                         fluidRow(
                           column(width=4,
                                  leafletOutput("map1", width="100%", height=200),
@@ -167,8 +174,14 @@ fluidPage(
              )),
     
     
-    tabPanel("About",
-             h5("redistrictR is a project by Joe Izenman, Nick Chen, and Nikki Lee")),
+    tabPanel("Zoom",
+             fluidRow(
+               column(8, offset=2, align="center",
+                      h2("See details on your selected map")
+                      # leafletOutput("map_select", width="100%", height=600)
+                      )
+               )
+             ),
     
     
     tabPanel("Feedback",
