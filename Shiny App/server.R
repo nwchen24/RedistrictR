@@ -472,7 +472,7 @@ server <- function(input, output, session) {
   
   output$cluster_proximity = renderPlotly({
     p = ggplot(solution_subset(), aes(round(cluster_proximity,2), text=paste(..count..,"potential maps with","<br>","cluster proximity score of",x))) +
-      xlab("Geographic Cluster Score") +
+      xlab("Demographic Cluster Score") +
       geom_bar(fill=bar_cols$cluster_proximity) + 
       theme(panel.background = element_blank(),
             plot.background = element_blank(),
