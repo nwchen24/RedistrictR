@@ -613,7 +613,7 @@ def vote_efficiency_gap(ind):
 
     del data['district_assignment']
 
-    return (efficiency_gap_pct)
+    return (1 - efficiency_gap_pct)
 
 
 def zone_adjacency(ind):
