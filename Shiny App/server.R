@@ -97,40 +97,173 @@ server <- function(input, output, session) {
   
   map_theme = providers$CartoDB.DarkMatterNoLabels
   
-#  outputOptions(output, compactness, suspendWhenHidden=FALSE)
+  #####################################
+  ### ZOOMING IN WHEN CLICK ONE MAP ###
+  #####################################
   
-  ### ZOOMING IN WHEN CLICK ONE MAP
-  # clicked_map = reactiveValues()
-  # clicked_map$map = NA
+  observeEvent(input$map1_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[1,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({as.character(round(solution_subset()[1,]$compactness,2))})
+    output$map_select_ve = renderText({as.character(round(solution_subset()[1,]$vote_efficiency,2))})
+    output$map_select_cp = renderText({as.character(round(solution_subset()[1,]$cluster_proximity,2))})
+    
+  })
   
-  # observeEvent(input$map5_shape_click, {
-  #   print("zooming")
-  #   updateTabsetPanel(session, "redistrictR",
-  #                     selected = "Zoom")
-  #   output$map_select = "map5"
-  # })
-  # 
-  # observeEvent(input$map6_shape_click, {
-  #   print("zooming")
-  #   updateTabsetPanel(session, "redistrictR",
-  #                     selected = "Zoom")
-  #   output$map_select = output$map6
-  # })
+  observeEvent(input$map2_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[2,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({round(solution_subset()[2,]$compactness,2)})
+    output$map_select_ve = renderText({round(solution_subset()[2,]$vote_efficiency,2)})
+    output$map_select_cp = renderText({round(solution_subset()[2,]$cluster_proximity,2)})
+  })
   
-  ## HIGHLIGHTING BARS ON LEFT CHARTS
+  observeEvent(input$map3_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[3,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({round(solution_subset()[3,]$compactness,2)})
+    output$map_select_ve = renderText({round(solution_subset()[3,]$vote_efficiency,2)})
+    output$map_select_cp = renderText({round(solution_subset()[3,]$cluster_proximity,2)})
+  })
+  
+  observeEvent(input$map4_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[4,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({round(solution_subset()[4,]$compactness,2)})
+    output$map_select_ve = renderText({round(solution_subset()[4,]$vote_efficiency,2)})
+    output$map_select_cp = renderText({round(solution_subset()[4,]$cluster_proximity,2)})
+  })
+  
+  observeEvent(input$map5_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[5,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({round(solution_subset()[5,]$compactness,2)})
+    output$map_select_ve = renderText({round(solution_subset()[5,]$vote_efficiency,2)})
+    output$map_select_cp = renderText({round(solution_subset()[5,]$cluster_proximity,2)})
+  })
+  
+  observeEvent(input$map6_shape_click, {
+    print("zooming")
+    updateTabsetPanel(session, "redistrictR",
+                      selected = "Zoom")
+    output$map_select = renderLeaflet({
+      leaflet(options=leafletOptions(attribution=NULL)) %>%
+        addProviderTiles(map_theme,
+                         options = providerTileOptions(attribution=NULL)) %>%
+        addPolygons(data = merge(selected(),
+                                 getAssignments()(solution_subset()[6,]$id),
+                                 by.x='GEOID',
+                                 by.y='geoid'),
+                    color = "#444444", weight = .3, smoothFactor = 0.5,
+                    opacity = 1.0, fillOpacity = 0.9,
+                    fillColor = ~colorFactor(colors, as.factor(assignment))(as.factor(assignment)),
+                    highlightOptions = highlightOptions(color = "white", weight = 1,
+                                                        bringToFront = TRUE),
+                    label = ~paste("district:", assignment))
+    })
+    output$map_select_c = renderText({round(solution_subset()[6,]$compactness,2)})
+    output$map_select_ve = renderText({round(solution_subset()[6,]$vote_efficiency,2)})
+    output$map_select_cp = renderText({round(solution_subset()[6,]$cluster_proximity,2)})
+  })
+
+  
+  
+  ######################################
+  ## HIGHLIGHTING BARS ON LEFT CHARTS ##
+  ######################################
+  
+  # setting colors and reactive values for color changes
   cols_base = rgb(1,1,1,alpha=0.5)
   bar_cols = reactiveValues()
   bar_cols$compactness = cols_base
   bar_cols$vote_efficiency = cols_base
   bar_cols$cluster_proximity = cols_base
   
+  ############################################################
+  ## HIGHLIGHT COMPACTNESS CHART BASED ON MOUSEOVER OF PLOT ##
+  ############################################################
   
-  ## HIGHLIGHT COMPACTNESS CHART BASED ON MOUSEOVER OF PLOT
   observeEvent(input$map1_shape_mouseover, {
-    # m = input$map1_shape_mouseover
-    # values$map1_toggle = TRUE
-    # print(values$map1_toggle)
-    
     sub_comp = solution_subset() %>% group_by("c" = round(compactness,2)) %>% count()
     ind = which(sub_comp$c==round(solution_subset()[1,]$compactness,2))
     bar_cols$compactness = rep(cols_base, nrow(sub_comp))
@@ -155,7 +288,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$map4_shape_mouseover, {
-    
     sub_comp = solution_subset() %>% group_by("c" = round(compactness,2)) %>% count()
     ind = which(sub_comp$c==round(solution_subset()[4,]$compactness,2))
     bar_cols$compactness = rep(cols_base, nrow(sub_comp))
@@ -179,10 +311,11 @@ server <- function(input, output, session) {
     names(bar_cols$compactness) = sub_comp$c
   })
   
-  #######
+
+  #################################################################
+  ## HIGHLIGHT vote_efficiency CHART BASED ON MOUSEOVER OF PLOT ###
+  #################################################################
   
-  
-  ## HIGHLIGHT vote_efficiency CHART BASED ON MOUSEOVER OF PLOT
   observeEvent(input$map1_shape_mouseover, {
     sub_comp = solution_subset() %>% group_by("c" = round(vote_efficiency,2)) %>% count()
     ind = which(sub_comp$c==round(solution_subset()[1,]$vote_efficiency,2))
@@ -230,11 +363,11 @@ server <- function(input, output, session) {
     bar_cols$vote_efficiency[ind] = "yellow"
     names(bar_cols$vote_efficiency) = sub_comp$c
   })
-
-  #######
   
+  ###################################################################
+  ## HIGHLIGHT cluster_proximity CHART BASED ON MOUSEOVER OF PLOT ###
+  ###################################################################
   
-  ## HIGHLIGHT cluster_proximity CHART BASED ON MOUSEOVER OF PLOT
   observeEvent(input$map1_shape_mouseover, {
     sub_comp = solution_subset() %>% group_by("c" = round(cluster_proximity,2)) %>% count()
     ind = which(sub_comp$c==round(solution_subset()[1,]$cluster_proximity,2))
@@ -283,11 +416,11 @@ server <- function(input, output, session) {
     names(bar_cols$cluster_proximity) = sub_comp$c
   })
   
-  #######
+
+  ##########################################
+  ### RESULT DISTRIBUTIONS ON LEFT PANEL ###
+  ##########################################
   
-  
-  
-  ### RESULT DISTRIBUTIONS ON LEFT PANEL
   output$compactness = renderPlotly({
     p = ggplot(solution_subset(), aes(x=round(compactness,2), text=paste(..count..,"potential maps with","<br>","compactness of",x))) +
       xlab("Compactness Score") +
@@ -301,7 +434,8 @@ server <- function(input, output, session) {
           axis.text.x = element_text(color="white"),
           axis.title.y = element_blank(),
           axis.text.y = element_blank(),
-          legend.position="none")
+          legend.position="none") +
+      geom_vline(xintercept = 0.251689, col="#98282890")
     
     p$elementId <- NULL
 
@@ -325,7 +459,8 @@ server <- function(input, output, session) {
             axis.text.x = element_text(color="white"),
             axis.title.y = element_blank(),
             axis.text.y = element_blank(),
-            legend.position="none")
+            legend.position="none") +
+      geom_vline(xintercept = 0.92414, col="#98282890")
 
     p$elementId <- NULL
     
@@ -348,7 +483,8 @@ server <- function(input, output, session) {
             axis.text.x = element_text(color="white"),
             axis.title.y = element_blank(),
             axis.text.y = element_blank(),
-            legend.position="none")
+            legend.position="none") +
+      geom_vline(xintercept = 0.4962796, col="#98282890")
     
     p$elementId <- NULL
     
@@ -359,19 +495,10 @@ server <- function(input, output, session) {
   )
   
   
-  ### LEAFLET MAPS ON RIGHT PANEL
-  values = reactiveValues()
-  values$map1_toggle = FALSE
-
+  ###################################
+  ### LEAFLET MAPS ON RIGHT PANEL ###
+  ###################################
   
-  output$map1_button = reactive({return(values$map1_toggle)})
-  
-  observeEvent(input$map2_shape_mouseover, {
-    hovertimes = 1
-    mouse = input$map2_shape_mouseover
-    if (mouse$.nonce > 0) print("hi")
-  })
-
   output$map1 = renderLeaflet({
     leaflet(options=leafletOptions(attribution=NULL)) %>%
       addProviderTiles(map_theme,

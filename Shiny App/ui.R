@@ -89,9 +89,8 @@ fluidPage(
                       p("RedistrictR is an interactive tool that helps you 
                         explore and understand how voting districts can be 
                         drawn differently given different factors of fairness. 
-                        For instance, if you optimize just for compactness, 
-                        how does that impact your map's measure of vote efficiency? 
-                        etc etc.",
+                        ie), if you optimize just for compactness, 
+                        how does that impact your map's measure of vote efficiency?",
                         style={"padding:0px 0px 30px; font-size:16px"}),
                       actionButton("start","Try it out!"),
                       p(HTML("<font color='#7c7c7c'>MIDS December 2017<br>joe izenman, nick chen, nikki lee</font>"), style={"font-size:12px; padding: 100px 0px 0px"})
@@ -118,17 +117,9 @@ fluidPage(
                                          label="",
                                          choices = list("Compactness" = 'compactness',
                                                         "Vote Efficiency" = 'vote_efficiency',
-                                                        "Geographic Cluster" = 'cluster_proximity'),
+                                                        "Demographic Cluster" = 'cluster_proximity'),
                                          selected = 'compactness',
                                          inline=TRUE))
-               # column(width=3,
-               #        selectInput("optfactor",
-               #                    choices = list("Compactness" = 'compactness',
-               #                                   "Vote Efficiency" = 'vote_efficiency',
-               #                                   "Communities of Interest" = 'communities',
-               #                                   "Geographic Cluster" = 'cluster_proximity'),
-               #                    label = "",
-               #                    selected = 'compactness'))
              ),
              
              br(),br(),
@@ -177,8 +168,11 @@ fluidPage(
     tabPanel("Zoom",
              fluidRow(
                column(8, offset=2, align="center",
-                      h2("See details on your selected map")
-                      # leafletOutput("map_select", width="100%", height=600)
+                      h2("See details on your selected map"),
+                      p("Compactness:", textOutput("map_select_c")),
+                      p("Vote Efficiency:", textOutput("map_select_ve")),
+                      p("Demographic Clustering:", textOutput("map_select_cp")),
+                      leafletOutput("map_select", width="100%", height=500)
                       )
                )
              ),
